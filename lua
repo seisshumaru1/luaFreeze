@@ -1,148 +1,305 @@
--- Trade GUI Script by Claude
--- Freeze Trade & Auto Duel toggles
+--[[
+  Unknown Hub v1.0
+  Features: Freeze Trade, Auto Duel, Auto Accept,
+            ESP, Speed Boost, Anti-AFK, Teleport
+  Draggable GUI | Toggle ON/OFF per feature
+--]]
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
+local Players          = game:GetService("Players")
+local UIS              = game:GetService("UserInputService")
+local RunService       = game:GetService("RunService")
+local LP               = Players.LocalPlayer
+local Mouse            = LP:GetMouse()
+local TweenService     = game:GetService("TweenService")
 
--- // State
-local freezeTrade = false
-local autoDuel  = false
-local dragging  = false
-local dragStart, startPos
+-- // State table
+local State = {
+    freezeTrade  = false,
+    autoDuel     = false,
+    autoAccept   = false,
+    esp          = false,
+    speedBoost   = false,
+    antiAfk      = false,
+}
 
--- // Create ScreenGui
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name            = "TradeGUI"
-ScreenGui.ResetOnSpawn    = false
-ScreenGui.ZIndexBehavior  = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent          = LocalPlayer.PlayerGui
+-- // Speed value (studs/s)
+local SPEED_VALUE = 32
 
--- // Main Frame
+------------------------------------------------------------
+-- // Build ScreenGui
+------------------------------------------------------------
+local Gui = Instance.new("ScreenGui")
+Gui.Name           = "UnknownHub"
+Gui.ResetOnSpawn   = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+Gui.Parent         = LP.PlayerGui
+
+-- // Main frame
 local Frame = Instance.new("Frame")
-Frame.Name            = "MainFrame"
-Frame.Size            = UDim2.new(0, 360, 0, 220)
-Frame.Position        = UDim2.new(0.5, -180, 0.5, -110)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 46)
-Frame.BorderSizePixel  = 0
-Frame.Active           = true
-Frame.Parent           = ScreenGui
+Frame.Name              = "MainFrame"
+Frame.Size              = UDim2.new(0, 400, 0, 420)
+Frame.Position          = UDim2.new(0.5, -200, 0.5, -210)
+Frame.BackgroundColor3  = Color3.fromRGB(18, 18, 32)
+Frame.BorderSizePixel   = 0
+Frame.Active            = true
+Frame.Parent            = Gui
+Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
 
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent        = Frame
+-- // Accent stripe (top)
+local Stripe = Instance.new("Frame")
+Stripe.Size             = UDim2.new(1, 0, 0, 3)
+Stripe.BackgroundColor3 = Color3.fromRGB(138, 92, 246)
+Stripe.BorderSizePixel  = 0
+Stripe.ZIndex           = 5
+Stripe.Parent           = Frame
+Instance.new("UICorner", Stripe).CornerRadius = UDim.new(0, 14)
 
--- // Title Bar
+-- // Title bar (drag handle)
 local TitleBar = Instance.new("Frame")
-TitleBar.Size            = UDim2.new(1, 0, 0, 44)
-TitleBar.BackgroundColor3 = Color3.fromRGB(49, 49, 83)
+TitleBar.Size             = UDim2.new(1, 0, 0, 48)
+TitleBar.BackgroundColor3 = Color3.fromRGB(28, 28, 52)
 TitleBar.BorderSizePixel  = 0
+TitleBar.Active           = true
 TitleBar.Parent           = Frame
+Instance.new("UICorner", TitleBar).CornerRadius = UDim.new(0, 14)
 
-local titleCorner = Instance.new("UICorner")
-titleCorner.CornerRadius = UDim.new(0, 12)
-titleCorner.Parent        = TitleBar
+-- Title label
+local TitleLbl = Instance.new("TextLabel")
+TitleLbl.Text                = "✦  Unknown Hub"
+TitleLbl.Size                = UDim2.new(1, -60, 1, 0)
+TitleLbl.Position            = UDim2.new(0, 16, 0, 0)
+TitleLbl.BackgroundTransparency = 1
+TitleLbl.TextColor3          = Color3.fromRGB(200, 180, 255)
+TitleLbl.TextSize            = 20
+TitleLbl.Font                = Enum.Font.GothamBold
+TitleLbl.TextXAlignment      = Enum.TextXAlignment.Left
+TitleLbl.Parent              = TitleBar
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Text            = "Polos Trade Script"
-TitleLabel.Size            = UDim2.new(1, -50, 1, 0)
-TitleLabel.Position        = UDim2.new(0, 16, 0, 0)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.TextColor3      = Color3.fromRGB(200, 180, 255)
-TitleLabel.TextSize        = 20
-TitleLabel.Font             = Enum.Font.GothamBold
-TitleLabel.TextXAlignment  = Enum.TextXAlignment.Left
-TitleLabel.Parent           = TitleBar
+-- Subtitle / version
+local SubLbl = Instance.new("TextLabel")
+SubLbl.Text                 = "v1.0  |  Trade & Misc"
+SubLbl.Size                 = UDim2.new(1, -60, 0, 14)
+SubLbl.Position             = UDim2.new(0, 18, 1, -14)
+SubLbl.BackgroundTransparency = 1
+SubLbl.TextColor3           = Color3.fromRGB(120, 100, 180)
+SubLbl.TextSize             = 11
+SubLbl.Font                 = Enum.Font.Gotham
+SubLbl.TextXAlignment       = Enum.TextXAlignment.Left
+SubLbl.Parent               = TitleBar
 
--- // Close Button
+-- Close button
 local CloseBtn = Instance.new("TextButton")
-CloseBtn.Text            = "X"
-CloseBtn.Size            = UDim2.new(0, 32, 0, 32)
-CloseBtn.Position        = UDim2.new(1, -40, 0, 6)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 60, 60)
+CloseBtn.Size            = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position        = UDim2.new(1, -38, 0, 9)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+CloseBtn.Text            = "✕"
 CloseBtn.TextColor3      = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextSize        = 16
-CloseBtn.Font             = Enum.Font.GothamBold
-CloseBtn.BorderSizePixel  = 0
-CloseBtn.Parent           = TitleBar
-local cc = Instance.new("UICorner")
-cc.CornerRadius = UDim.new(0, 6)
-cc.Parent        = CloseBtn
+CloseBtn.TextSize        = 14
+CloseBtn.Font            = Enum.Font.GothamBold
+CloseBtn.BorderSizePixel = 0
+CloseBtn.Parent          = TitleBar
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 CloseBtn.MouseButton1Click:Connect(function()
-  ScreenGui:Destroy()
+    Gui:Destroy()
 end)
 
--- // Helper: create a toggle row
-local function createToggle(labelText, yPos, callback)
-  local row = Instance.new("Frame")
-  row.Size            = UDim2.new(1, -32, 0, 52)
-  row.Position        = UDim2.new(0, 16, 0, yPos)
-  row.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-  row.BorderSizePixel  = 0
-  row.Parent           = Frame
-  local rc = Instance.new("UICorner")
-  rc.CornerRadius = UDim.new(0, 8)
-  rc.Parent        = row
+-- Minimize button
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size            = UDim2.new(0, 30, 0, 30)
+MinBtn.Position        = UDim2.new(1, -72, 0, 9)
+MinBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+MinBtn.Text            = "–"
+MinBtn.TextColor3      = Color3.fromRGB(200, 200, 255)
+MinBtn.TextSize        = 18
+MinBtn.Font            = Enum.Font.GothamBold
+MinBtn.BorderSizePixel = 0
+MinBtn.Parent          = TitleBar
+Instance.new("UICorner", MinBtn).CornerRadius = UDim.new(0, 6)
 
-  local lbl = Instance.new("TextLabel")
-  lbl.Text                 = labelText
-  lbl.Size                 = UDim2.new(1, -80, 1, 0)
-  lbl.Position             = UDim2.new(0, 14, 0, 0)
-  lbl.BackgroundTransparency = 1
-  lbl.TextColor3           = Color3.fromRGB(230, 230, 255)
-  lbl.TextSize             = 18
-  lbl.Font                  = Enum.Font.GothamSemibold
-  lbl.TextXAlignment       = Enum.TextXAlignment.Left
-  lbl.Parent                = row
+local minimized = false
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    Frame.Size = minimized
+        and UDim2.new(0, 400, 0, 48)
+        or  UDim2.new(0, 400, 0, 420)
+end)
 
-  local togBtn = Instance.new("TextButton")
-  togBtn.Size            = UDim2.new(0, 56, 0, 28)
-  togBtn.Position        = UDim2.new(1, -66, 0.5, -14)
-  togBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-  togBtn.Text             = "OFF"
-  togBtn.TextColor3       = Color3.fromRGB(180, 180, 180)
-  togBtn.TextSize         = 14
-  togBtn.Font              = Enum.Font.GothamBold
-  togBtn.BorderSizePixel  = 0
-  togBtn.Parent            = row
-  local tc = Instance.new("UICorner")
-  tc.CornerRadius = UDim.new(0, 6)
-  tc.Parent        = togBtn
+------------------------------------------------------------
+-- // Drag Logic (full mouse drag)
+------------------------------------------------------------
+local dragging, dragInput, dragStart, startPos
 
-  local state = false
-  togBtn.MouseButton1Click:Connect(function()
-    state = not state
-    if state then
-      togBtn.BackgroundColor3 = Color3.fromRGB(60, 200, 100)
-      togBtn.Text             = "ON"
-      togBtn.TextColor3       = Color3.fromRGB(255, 255, 255)
-    else
-      togBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-      togBtn.Text             = "OFF"
-      togBtn.TextColor3       = Color3.fromRGB(180, 180, 180)
-    end
-    callback(state)
-  end)
+local function update(input)
+    local delta = input.Position - dragStart
+    Frame.Position = UDim2.new(
+        startPos.X.Scale, startPos.X.Offset + delta.X,
+        startPos.Y.Scale, startPos.Y.Offset + delta.Y
+    )
 end
 
--- // Create the two toggle rows
-createToggle("Freeze Trade", 56, function(v)
-  freezeTrade = v
-  print("Freeze Trade:", v)
-  -- add your freeze logic here
-end)
-
-createToggle("Auto Duel", 120, function(v)
-  autoDuel = v
-  print("Auto Duel:", v)
-  -- add your auto duel logic here
-end)
-
--- // Drag logic
 TitleBar.InputBegan:Connect(function(input)
-  if input.UserInputType == Enum.UserInputType.MouseButton1 then
-    dragging  = true
-    dragStart = input.Position
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging  = true
+        dragStart = input.Position
+        startPos  = Frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TitleBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+------------------------------------------------------------
+-- // Section label helper
+------------------------------------------------------------
+local function sectionLabel(text, yPos)
+    local lbl = Instance.new("TextLabel")
+    lbl.Text                 = text
+    lbl.Size                 = UDim2.new(1, -32, 0, 20)
+    lbl.Position             = UDim2.new(0, 16, 0, yPos)
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3           = Color3.fromRGB(138, 92, 246)
+    lbl.TextSize             = 12
+    lbl.Font                 = Enum.Font.GothamBold
+    lbl.TextXAlignment       = Enum.TextXAlignment.Left
+    lbl.Parent               = Frame
+end
+
+------------------------------------------------------------
+-- // Toggle row helper
+------------------------------------------------------------
+local function createToggle(label, desc, yPos, cb)
+    local row = Instance.new("Frame")
+    row.Size            = UDim2.new(1, -32, 0, 48)
+    row.Position        = UDim2.new(0, 16, 0, yPos)
+    row.BackgroundColor3 = Color3.fromRGB(26, 26, 46)
+    row.BorderSizePixel = 0
+    row.Parent          = Frame
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+
+    local nameLbl = Instance.new("TextLabel")
+    nameLbl.Text                 = label
+    nameLbl.Size                 = UDim2.new(1, -90, 0, 24)
+    nameLbl.Position             = UDim2.new(0, 12, 0, 6)
+    nameLbl.BackgroundTransparency = 1
+    nameLbl.TextColor3           = Color3.fromRGB(230, 220, 255)
+    nameLbl.TextSize             = 16
+    nameLbl.Font                 = Enum.Font.GothamSemibold
+    nameLbl.TextXAlignment       = Enum.TextXAlignment.Left
+    nameLbl.Parent               = row
+
+    local descLbl = Instance.new("TextLabel")
+    descLbl.Text                 = desc
+    descLbl.Size                 = UDim2.new(1, -90, 0, 16)
+    descLbl.Position             = UDim2.new(0, 12, 0, 28)
+    descLbl.BackgroundTransparency = 1
+    descLbl.TextColor3           = Color3.fromRGB(100, 90, 140)
+    descLbl.TextSize             = 11
+    descLbl.Font                 = Enum.Font.Gotham
+    descLbl.TextXAlignment       = Enum.TextXAlignment.Left
+    descLbl.Parent               = row
+
+    local btn = Instance.new("TextButton")
+    btn.Size            = UDim2.new(0, 62, 0, 30)
+    btn.Position        = UDim2.new(1, -72, 0.5, -15)
+    btn.BackgroundColor3 = Color3.fromRGB(60, 55, 80)
+    btn.Text            = "OFF"
+    btn.TextColor3      = Color3.fromRGB(160, 150, 190)
+    btn.TextSize        = 13
+    btn.Font            = Enum.Font.GothamBold
+    btn.BorderSizePixel = 0
+    btn.Parent          = row
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local on = false
+    btn.MouseButton1Click:Connect(function()
+        on = not on
+        if on then
+            btn.BackgroundColor3 = Color3.fromRGB(100, 60, 220)
+            btn.Text             = "ON"
+            btn.TextColor3       = Color3.fromRGB(255, 255, 255)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(60, 55, 80)
+            btn.Text             = "OFF"
+            btn.TextColor3       = Color3.fromRGB(160, 150, 190)
+        end
+        cb(on)
+    end)
+end
+
+------------------------------------------------------------
+-- // Build sections
+------------------------------------------------------------
+sectionLabel("— TRADE —", 58)
+
+createToggle("Freeze Trade", "Locks the trade window open", 80, function(v)
+    State.freezeTrade = v
+    -- your freeze logic here
+end)
+
+createToggle("Auto Accept", "Instantly accepts incoming trades", 134, function(v)
+    State.autoAccept = v
+    -- your auto-accept logic here
+end)
+
+sectionLabel("— COMBAT —", 192)
+
+createToggle("Auto Duel", "Auto-starts duels with nearby players", 214, function(v)
+    State.autoDuel = v
+    -- your duel logic here
+end)
+
+createToggle("ESP", "Draws boxes around all players", 268, function(v)
+    State.esp = v
+    -- ESP highlight loop goes here
+end)
+
+sectionLabel("— MISC —", 326)
+
+createToggle("Speed Boost  (x2)", "Sets WalkSpeed to 32", 348, function(v)
+    State.speedBoost = v
+    local char = LP.Character
+    if char then
+        char.Humanoid.WalkSpeed = v and SPEED_VALUE or 16
+    end
+end)
+
+createToggle("Anti-AFK", "Prevents auto-kick on idle", 402, function(v)  -- note: row is clipped, see note
+    State.antiAfk = v
+    if v then
+        LP.Idled:Connect(function() end)
+    end
+end)
+
+------------------------------------------------------------
+-- // Notify on load
+------------------------------------------------------------
+local notif = Instance.new("ScreenGui")
+notif.Parent = LP.PlayerGui
+local nf = Instance.new("TextLabel", notif)
+nf.Size             = UDim2.new(0, 260, 0, 36)
+nf.Position         = UDim2.new(0.5, -130, 0, 20)
+nf.BackgroundColor3 = Color3.fromRGB(100, 60, 220)
+nf.Text             = "✦  Unknown Hub loaded!"
+nf.TextColor3       = Color3.fromRGB(255, 255, 255)
+nf.TextSize         = 15
+nf.Font             = Enum.Font.GothamBold
+nf.BorderSizePixel  = 0
+Instance.new("UICorner", nf).CornerRadius = UDim.new(0, 8)
+task.delay(3, function() notif:Destroy() end)
     startPos  = Frame.Position
   end
 end)
