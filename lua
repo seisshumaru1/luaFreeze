@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- UNKNOWN HUB - FULL UI + GUARANTEED WORKING VERSION
+-- UNKNOWN HUB - FORCE RENDER FIX
 -- ═══════════════════════════════════════════════════════════════
 
 local function checkExecutor()
@@ -66,7 +66,8 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 
-local playerGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+-- Use standard PlayerGui to avoid rendering bugs in some executors
+local playerGui = LocalPlayer:WaitForChild("PlayerGui")
 
 local DISCORD_LINK = "https://discord.gg/chilli-hub"
 local REMOTE_URL = "https://raw.githubusercontent.com/tkhanhh/Spicy/refs/heads/main/loo"
@@ -84,7 +85,6 @@ local C_TEAL = Color3.fromRGB(52, 180, 230)
 local C_TXT = Color3.fromRGB(241, 245, 249)
 local C_MUT = Color3.fromRGB(148, 163, 184)
 local C_TOFF = Color3.fromRGB(60, 70, 90)
-local C_HOV = Color3.fromRGB(35, 45, 50)
 
 -- Config
 config = config or {}
@@ -808,6 +808,9 @@ local function showDiscord()
         config.__ChilliHubDiscordShown = true
         saveCfg()
         dg:Destroy()
+        -- ABSOLUTELY FORCE HUB TO SHOW WHEN DISCORD IS CLOSED
+        hubMain.Visible = true
+        hubOpen = true
     end
     cb.MouseButton1Click:Connect(closeD)
     dov.InputBegan:Connect(function(i)
@@ -816,8 +819,21 @@ local function showDiscord()
 end
 
 -- ═══════════════════════════════════════════════════════════════
--- 5. THE FOOLPROOF EXECUTION SEQUENCE
+-- 5. THE ULTIMATE FOOLPROOF EXECUTION SEQUENCE
 -- ═══════════════════════════════════════════════════════════════
+
+-- Custom wait that bypasses broken executor wait() functions
+local function safeWait(seconds)
+    local startTime = tick()
+    repeat
+        RunService.Heartbeat:Wait()
+    until tick() - startTime >= seconds
+end
+
+-- FORCE the screen to render the loading screen before doing anything else
+RunService.RenderStepped:Wait()
+RunService.RenderStepped:Wait()
+
 local steps = {
     {10, "Checking executor..."},
     {25, "Loading configuration..."},
@@ -828,35 +844,33 @@ local steps = {
     {100, "Complete!"}
 }
 
--- Run loading steps
+-- Run loading steps using our unbreakable safe wait
 for i, step in ipairs(steps) do
     loadFill.Size = UDim2.new(step[1]/100, 0, 1, 0)
     loadStat.Text = step[2]
-    wait(0.35)
+    safeWait(0.35)
 end
 
--- Wait for last progress bar to render
-wait(0.2)
+safeWait(0.2)
 
--- INSTANTLY DESTROY LOADING SCREEN (No tweens that can break!)
+-- INSTANTLY DESTROY LOADING SCREEN
 loadGui:Destroy()
 
--- Small delay to let Roblox clear the GUI
-wait(0.2)
+safeWait(0.2)
 
 -- Show Discord Popup if first run
-showDiscord()
+if not firstShownFlag then
+    showDiscord()
+    safeWait(0.5)
+end
 
--- Wait for popup to render if it shows
-wait(0.3)
-
--- SHOW THE MAIN HUB MENU
+-- ABSOLUTELY FORCE THE HUB TO SHOW
 hubMain.Visible = true
 hubOpen = true
 
--- ═══════════════════════════════════════════════════════════════
--- GLOBAL REFERENCE
--- ═══════════════════════════════════════════════════════════════
+-- Extra safeguard to ensure it renders
+RunService.RenderStepped:Wait()
+
 _G.UnknownHub = {
     Toggle = toggleHub,
     Close = closeHub
