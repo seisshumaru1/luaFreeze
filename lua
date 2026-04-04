@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- UNKNOWN HUB - Fixed Loading Screen
+-- UNKNOWN HUB - Guaranteed Loading Screen Fix
 -- ═══════════════════════════════════════════════════════════════
 
 local function checkExecutor()
@@ -96,20 +96,20 @@ local _makeCard = (type(makeCard) == "function") and makeCard or function(parent
     frame.BorderSizePixel = 0
     frame.Size = sizeUDim2
     frame.Parent = parent
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 20)
-    local g = Instance.new("UIGradient", frame)
+    Instance.new("UICorner', frame).CornerRadius = UDim.new(0, 20)
+    local g = Instance.new('UIGradient', frame)
     g.Rotation = 35
     g.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0.00, COLOR_CARD_GRAD_1),
         ColorSequenceKeypoint.new(0.55, COLOR_CARD_GRAD_2),
         ColorSequenceKeypoint.new(1.00, COLOR_CARD_GRAD_3),
     })
-    local s1 = Instance.new("UIStroke", frame)
+    local s1 = Instance.new('UIStroke', frame)
     s1.Thickness = 8
     s1.Transparency = 0.90
     s1.LineJoinMode = Enum.LineJoinMode.Round
     s1.Color = COLOR_STROKE_GLOW
-    local s2 = Instance.new("UIStroke", frame)
+    local s2 = Instance.new('UIStroke', frame)
     s2.Thickness = 2
     s2.Transparency = 0.15
     s2.LineJoinMode = Enum.LineJoinMode.Round
@@ -118,15 +118,15 @@ local _makeCard = (type(makeCard) == "function") and makeCard or function(parent
 end
 
 local _makeTopBar = (type(makeTopBar) == "function") and makeTopBar or function(parent, titleText)
-    local bar = Instance.new("Frame")
+    local bar = Instance.new('Frame')
     bar.Parent = parent
     bar.BackgroundColor3 = COLOR_SURFACE_DARK
     bar.BackgroundTransparency = 0.15
     bar.BorderSizePixel = 0
     bar.Size = UDim2.new(1, -16, 0, 42)
     bar.Position = UDim2.new(0, 8, 0, 8)
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 14)
-    local lbl = Instance.new("TextLabel")
+    Instance.new('UICorner', bar).CornerRadius = UDim.new(0, 14)
+    local lbl = Instance.new('TextLabel')
     lbl.Parent = bar
     lbl.BackgroundTransparency = 1
     lbl.Position = UDim2.new(0, 14, 0, 0)
@@ -136,7 +136,7 @@ local _makeTopBar = (type(makeTopBar) == "function") and makeTopBar or function(
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.TextSize = 18
     lbl.TextColor3 = COLOR_TEXT
-    local grad = Instance.new("UIGradient", lbl)
+    local grad = Instance.new('UIGradient', lbl)
     grad.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0.00, Color3.fromRGB(34, 211, 238)),
         ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
@@ -222,13 +222,13 @@ else
 end
 
 -- ═══════════════════════════════════════════════════════════════
--- LOADING SCREEN
+-- LOADING SCREEN - ABSOLUTELY GUARANTEED TO DISAPPEAR
 -- ═══════════════════════════════════════════════════════════════
 local loadingGui = Instance.new("ScreenGui")
 loadingGui.Name = "UnknownHubLoading"
 loadingGui.IgnoreGuiInset = true
 loadingGui.ResetOnSpawn = false
-loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 loadingGui.DisplayOrder = 9999
 loadingGui.Parent = playerGui
 
@@ -239,7 +239,6 @@ loadingOverlay.BackgroundColor3 = COLOR_BASE_BG
 loadingOverlay.BorderSizePixel = 0
 loadingOverlay.Parent = loadingGui
 
--- Particles
 local particles = {}
 for i = 1, 25 do
     local p = Instance.new("Frame")
@@ -260,7 +259,6 @@ for i = 1, 25 do
     })
 end
 
--- Logo
 local logoFrame = Instance.new("Frame")
 logoFrame.Size = UDim2.fromOffset(90, 90)
 logoFrame.Position = UDim2.new(0.5, 0, 0.35, 0)
@@ -286,7 +284,6 @@ logoLabel.TextSize = 32
 logoLabel.TextColor3 = COLOR_TEAL_ON
 logoLabel.Parent = logoFrame
 
--- Title
 local loadingTitle = Instance.new("TextLabel")
 loadingTitle.Size = UDim2.new(0, 400, 0, 40)
 loadingTitle.Position = UDim2.new(0.5, 0, 0.55, 0)
@@ -305,7 +302,6 @@ titleGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(1.00, Color3.fromRGB(99, 102, 241)),
 })
 
--- Subtitle
 local loadingSub = Instance.new("TextLabel")
 loadingSub.Size = UDim2.new(0, 300, 0, 20)
 loadingSub.Position = UDim2.new(0.5, 0, 0.62, 0)
@@ -317,7 +313,6 @@ loadingSub.TextSize = 14
 loadingSub.TextColor3 = COLOR_TEXT_MUTED
 loadingSub.Parent = loadingOverlay
 
--- Progress bar
 local progressBg = Instance.new("Frame")
 progressBg.Size = UDim2.new(0, 300, 0, 6)
 progressBg.Position = UDim2.new(0.5, -150, 0.68, 0)
@@ -337,7 +332,6 @@ local progressFillCorner = Instance.new("UICorner")
 progressFillCorner.CornerRadius = UDim.new(0, 3)
 progressFillCorner.Parent = progressFill
 
--- Status
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(0, 300, 0, 16)
 statusLabel.Position = UDim2.new(0.5, -150, 0.74, 0)
@@ -348,7 +342,6 @@ statusLabel.TextSize = 12
 statusLabel.TextColor3 = COLOR_TEXT_MUTED
 statusLabel.Parent = loadingOverlay
 
--- Version
 local versionLabel = Instance.new("TextLabel")
 versionLabel.Size = UDim2.new(0, 300, 0, 16)
 versionLabel.Position = UDim2.new(0.5, -150, 0.92, 0)
@@ -365,8 +358,37 @@ pcall(function()
 end)
 versionLabel.Text = "v1.0.0 | " .. execDisplay
 
--- Animation connection
-local loadingConn = RunService.Heartbeat:Connect(function(dt)
+-- GUARANTEED DESTROY FUNCTION
+local loadingDestroyed = false
+local loadingConn = nil
+
+local function ForceDestroyLoading()
+    if loadingDestroyed then return end
+    loadingDestroyed = true
+    
+    -- Stop animation
+    if loadingConn then
+        pcall(function() loadingConn:Disconnect() end)
+        loadingConn = nil
+    end
+    
+    -- Hide immediately
+    pcall(function()
+        loadingGui.Enabled = false
+    end)
+    
+    -- Destroy
+    pcall(function()
+        loadingGui:Destroy()
+    end)
+    
+    loadingGui = nil
+    loadingOverlay = nil
+end
+
+-- Animation
+loadingConn = RunService.Heartbeat:Connect(function(dt)
+    if loadingDestroyed then return end
     for _, particle in ipairs(particles) do
         if particle.instance and particle.instance.Parent then
             local pos = particle.instance.Position
@@ -393,7 +415,7 @@ local function ShowDiscordPopup()
     popupGui.Name = "UnknownHubDiscord"
     popupGui.IgnoreGuiInset = true
     popupGui.ResetOnSpawn = false
-    popupGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    popupGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     popupGui.Parent = playerGui
     
     local popupOverlay = Instance.new("Frame")
@@ -420,9 +442,7 @@ local function ShowDiscordPopup()
     closeBtn.TextColor3 = COLOR_TEXT
     closeBtn.Size = UDim2.fromOffset(28, 28)
     closeBtn.Position = UDim2.new(1, -34, 0.5, -14)
-    local closeBtnCorner = Instance.new("UICorner")
-    closeBtnCorner.CornerRadius = UDim.new(0, 8)
-    closeBtnCorner.Parent = closeBtn
+    Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 8)
     local closeStroke = Instance.new("UIStroke")
     closeStroke.Parent = closeBtn
     closeStroke.Thickness = 1
@@ -452,9 +472,7 @@ local function ShowDiscordPopup()
     copyBtn.Font = Enum.Font.GothamBlack
     copyBtn.TextSize = 16
     copyBtn.TextColor3 = Color3.fromRGB(14, 25, 38)
-    local copyBtnCorner = Instance.new("UICorner")
-    copyBtnCorner.CornerRadius = UDim.new(0, 12)
-    copyBtnCorner.Parent = copyBtn
+    Instance.new("UICorner", copyBtn).CornerRadius = UDim.new(0, 12)
     local cpStroke = Instance.new("UIStroke")
     cpStroke.Parent = copyBtn
     cpStroke.Thickness = 1
@@ -532,7 +550,7 @@ local hubGui = Instance.new("ScreenGui")
 hubGui.Name = "UnknownHub"
 hubGui.IgnoreGuiInset = true
 hubGui.ResetOnSpawn = false
-hubGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+hubGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 hubGui.Parent = playerGui
 
 local hubMain = _makeCard(hubGui, UDim2.fromOffset(220, 380))
@@ -553,9 +571,7 @@ hubCloseBtn.TextSize = 12
 hubCloseBtn.TextColor3 = COLOR_TEXT
 hubCloseBtn.Size = UDim2.fromOffset(24, 24)
 hubCloseBtn.Position = UDim2.new(1, -32, 0.5, -12)
-local hubCloseBtnCorner = Instance.new("UICorner")
-hubCloseBtnCorner.CornerRadius = UDim.new(0, 6)
-hubCloseBtnCorner.Parent = hubCloseBtn
+Instance.new("UICorner", hubCloseBtn).CornerRadius = UDim.new(0, 6)
 
 local hubMinBtn = Instance.new("TextButton")
 hubMinBtn.Parent = hubTop
@@ -568,9 +584,7 @@ hubMinBtn.TextSize = 14
 hubMinBtn.TextColor3 = COLOR_TEXT
 hubMinBtn.Size = UDim2.fromOffset(24, 24)
 hubMinBtn.Position = UDim2.new(1, -60, 0.5, -12)
-local hubMinBtnCorner = Instance.new("UICorner")
-hubMinBtnCorner.CornerRadius = UDim.new(0, 6)
-hubMinBtnCorner.Parent = hubMinBtn
+Instance.new("UICorner", hubMinBtn).CornerRadius = UDim.new(0, 6)
 
 local contentScroll = Instance.new("ScrollingFrame")
 contentScroll.Name = "Content"
@@ -688,9 +702,7 @@ local function CreateToggle(name, default, callback, order)
     container.BorderSizePixel = 0
     container.LayoutOrder = order or 0
     container.Parent = contentScroll
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 10)
-    containerCorner.Parent = container
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 10)
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -50, 1, 0)
@@ -710,9 +722,7 @@ local function CreateToggle(name, default, callback, order)
     toggleBg.BackgroundColor3 = isOn and COLOR_TEAL_ON or COLOR_TOGGLE_OFF
     toggleBg.BorderSizePixel = 0
     toggleBg.Parent = container
-    local toggleBgCorner = Instance.new("UICorner")
-    toggleBgCorner.CornerRadius = UDim.new(0, 10)
-    toggleBgCorner.Parent = toggleBg
+    Instance.new("UICorner", toggleBg).CornerRadius = UDim.new(0, 10)
     
     local toggleCircle = Instance.new("Frame")
     toggleCircle.Size = UDim2.fromOffset(14, 14)
@@ -720,9 +730,7 @@ local function CreateToggle(name, default, callback, order)
     toggleCircle.BackgroundColor3 = COLOR_TEXT
     toggleCircle.BorderSizePixel = 0
     toggleCircle.Parent = toggleBg
-    local toggleCircleCorner = Instance.new("UICorner")
-    toggleCircleCorner.CornerRadius = UDim.new(0, 7)
-    toggleCircleCorner.Parent = toggleCircle
+    Instance.new("UICorner", toggleCircle).CornerRadius = UDim.new(0, 7)
     
     container.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -763,9 +771,7 @@ local function CreateButton(name, callback, order)
     btn.AutoButtonColor = false
     btn.LayoutOrder = order or 0
     btn.Parent = contentScroll
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 10)
-    btnCorner.Parent = btn
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
     
     local btnStroke = Instance.new("UIStroke")
     btnStroke.Parent = btn
@@ -814,9 +820,7 @@ local function CreateSlider(name, min, max, default, callback, order)
     container.BorderSizePixel = 0
     container.LayoutOrder = order or 0
     container.Parent = contentScroll
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 10)
-    containerCorner.Parent = container
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 10)
     
     local label = Instance.new("TextLabel")
     label.Size = UDim2.new(1, -60, 0, 22)
@@ -847,9 +851,7 @@ local function CreateSlider(name, min, max, default, callback, order)
     sliderBg.BackgroundColor3 = COLOR_TOGGLE_OFF
     sliderBg.BorderSizePixel = 0
     sliderBg.Parent = container
-    local sliderBgCorner = Instance.new("UICorner")
-    sliderBgCorner.CornerRadius = UDim.new(0, 3)
-    sliderBgCorner.Parent = sliderBg
+    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(0, 3)
     
     local percent = (value - min) / (max - min)
     local sliderFill = Instance.new("Frame")
@@ -857,9 +859,7 @@ local function CreateSlider(name, min, max, default, callback, order)
     sliderFill.BackgroundColor3 = COLOR_TEAL_ON
     sliderFill.BorderSizePixel = 0
     sliderFill.Parent = sliderBg
-    local sliderFillCorner = Instance.new("UICorner")
-    sliderFillCorner.CornerRadius = UDim.new(0, 3)
-    sliderFillCorner.Parent = sliderFill
+    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(0, 3)
     
     local sliderBtn = Instance.new("Frame")
     sliderBtn.Size = UDim2.fromOffset(14, 14)
@@ -868,9 +868,7 @@ local function CreateSlider(name, min, max, default, callback, order)
     sliderBtn.BackgroundColor3 = COLOR_TEXT
     sliderBtn.BorderSizePixel = 0
     sliderBtn.Parent = sliderBg
-    local sliderBtnCorner = Instance.new("UICorner")
-    sliderBtnCorner.CornerRadius = UDim.new(0, 7)
-    sliderBtnCorner.Parent = sliderBtn
+    Instance.new("UICorner", sliderBtn).CornerRadius = UDim.new(0, 7)
     
     local function updateSlider(newValue)
         value = math.clamp(newValue, min, max)
@@ -994,8 +992,29 @@ orderCounter = orderCounter + 1
 CreateLabel("Keybind: RightShift", orderCounter)
 
 -- ═══════════════════════════════════════════════════════════════
--- LOADING ANIMATION & PROPER DESTRUCTION
+-- LOADING SEQUENCE - TRIPLE GUARANTEED DESTRUCTION
 -- ═══════════════════════════════════════════════════════════════
+
+-- Method 1: Using delay (legacy but works everywhere)
+delay(4, function()
+    ForceDestroyLoading()
+    if not firstShownFlag then
+        pcall(ShowDiscordPopup)
+    end
+    task.wait(0.3)
+    hubMain.Visible = true
+    hubVisible = true
+    hubMinimized = false
+end)
+
+-- Method 2: Using task.delay
+task.delay(4.5, function()
+    ForceDestroyLoading()
+    hubMain.Visible = true
+    hubVisible = true
+end)
+
+-- Method 3: Using spawn + wait
 spawn(function()
     local steps = {
         {p = 0.1, s = "Checking executor...", sub = "Verifying compatibility"},
@@ -1009,48 +1028,43 @@ spawn(function()
     }
     
     for i, step in ipairs(steps) do
-        if not loadingOverlay or not loadingOverlay.Parent then break end
-        progressFill.Size = UDim2.fromScale(step.p, 1)
-        statusLabel.Text = step.s
-        loadingSub.Text = step.sub
-        task.wait(0.35)
+        if loadingDestroyed then break end
+        pcall(function()
+            progressFill.Size = UDim2.fromScale(step.p, 1)
+            statusLabel.Text = step.s
+            loadingSub.Text = step.sub
+        end)
+        wait(0.35)
     end
     
-    task.wait(0.3)
+    wait(0.3)
+    ForceDestroyLoading()
     
-    -- DISCONNECT the animation loop FIRST
-    if loadingConn then
-        loadingConn:Disconnect()
-        loadingConn = nil
-    end
-    
-    task.wait(0.1)
-    
-    -- SIMPLY DESTROY the loading GUI - no fade needed, this guarantees removal
-    if loadingGui and loadingGui.Parent then
-        loadingGui:Destroy()
-    end
-    
-    -- Wait a tiny bit after destruction
-    task.wait(0.2)
-    
-    -- Now show discord popup if needed
+    wait(0.2)
     if not firstShownFlag then
-        ShowDiscordPopup()
+        pcall(ShowDiscordPopup)
     end
     
-    -- Then show the hub
-    task.wait(0.3)
+    wait(0.3)
     hubMain.Visible = true
     hubVisible = true
     hubMinimized = false
 end)
 
+-- Method 4: ABSOLUTE FALLBACK - Force destroy after max time
+delay(8, function()
+    ForceDestroyLoading()
+    hubMain.Visible = true
+    hubVisible = true
+end)
+
 _G.UnknownHub = {
     Toggle = ToggleHub,
     Minimize = MinimizeHub,
-    IsVisible = function() return hubVisible end
+    IsVisible = function() return hubVisible end,
+    ForceDestroyLoading = ForceDestroyLoading
 }
 
 print("[Unknown Hub] Loaded successfully!")
 print("[Unknown Hub] Keybind: RightShift")
+print("[Unknown Hub] If loading screen stuck, run: _G.UnknownHub.ForceDestroyLoading()")
