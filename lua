@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- UNKNOWN HUB - Full Featured Script Hub
+-- UNKNOWN HUB - Full Featured Script Hub (FIXED)
 -- ═══════════════════════════════════════════════════════════════
 
 -- Services
@@ -12,7 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local LocalPlayer   = Players.LocalPlayer
 
 -- ═══════════════════════════════════════════════════════════════
--- COLOR SCHEME - Dark/Cyan Theme
+-- COLOR SCHEME
 -- ═══════════════════════════════════════════════════════════════
 local Colors = {
     BG_DARK       = Color3.fromRGB(10, 12, 18),
@@ -21,7 +21,7 @@ local Colors = {
     BG_HOVER      = Color3.fromRGB(28, 35, 50),
     BG_INPUT      = Color3.fromRGB(18, 22, 32),
     ACCENT        = Color3.fromRGB(0, 200, 255),
-    ACCENT_DARK   = Color3.fromRGB(0, 150, 200),
+    ACCENT_DARK   = Color3.fromRGB(0, 120, 170),
     ACCENT_GLOW   = Color3.fromRGB(0, 200, 255),
     SUCCESS       = Color3.fromRGB(0, 255, 136),
     WARNING       = Color3.fromRGB(255, 200, 0),
@@ -120,7 +120,6 @@ local function LoadConfig()
             end
         end
     end
-    -- Load settings
     if config.settings and type(config.settings) == "table" then
         settings = config.settings
     end
@@ -173,6 +172,7 @@ LoadingScreen.__index = LoadingScreen
 
 function LoadingScreen.new()
     local self = setmetatable({}, LoadingScreen)
+    self.isDestroyed = false
     
     self.gui = Create("ScreenGui", {
         Name = "UnknownHubLoading",
@@ -187,6 +187,7 @@ function LoadingScreen.new()
         Name = "Overlay",
         Size = UDim2.fromScale(1, 1),
         BackgroundColor3 = Colors.BG_DARK,
+        BackgroundTransparency = 0,
         BorderSizePixel = 0
     }, self.gui)
     
@@ -228,7 +229,6 @@ function LoadingScreen.new()
     AddCorner(self.logoCircle, 50)
     AddStroke(self.logoCircle, Colors.ACCENT, 2, 0.3)
     
-    -- Logo text
     self.logoText = Create("TextLabel", {
         Size = UDim2.fromScale(1, 1),
         BackgroundTransparency = 1,
@@ -306,7 +306,9 @@ function LoadingScreen.new()
     
     -- Animation loop
     self.connection = RunService.Heartbeat:Connect(function(dt)
-        self:Update(dt)
+        if not self.isDestroyed then
+            self:Update(dt)
+        end
     end)
     
     return self
@@ -328,97 +330,48 @@ function LoadingScreen:OnComplete(callback)
 end
 
 function LoadingScreen:Complete()
+    if self.isComplete then return end
     self.isComplete = true
     self:SetProgress(1, "Complete!")
     self.subtitle.Text = "Ready"
     
-    task.delay(0.5, function()
-        -- Fade out
-        local tween = TweenService:Create(self.overlay, TweenInfo.new(0.6, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-            BackgroundTransparency = 1
-        })
+    -- Use a fixed delay instead of relying on tween completion
+    spawn(function()
+        task.wait(0.8)
         
-        for _, particle in ipairs(self.particles) do
-            TweenService:Create(particle.instance, TweenInfo.new(0.6), {
-                BackgroundTransparency = 1
-            }):Play()
+        -- Fire callbacks FIRST before destroying
+        local cbs = {}
+        for _, cb in ipairs(self.callbacks) do
+            table.insert(cbs, cb)
         end
         
-        TweenService:Create(self.content, TweenInfo.new(0.6), {
-            GroupTransparency = 1
-        }):Play()
+        -- Now destroy the loading screen
+        self:Destroy()
         
-        tween:Play()
-        tween.Completed:Connect(function()
-            if self.connection then
-                self.connection:Disconnect()
-            end
-            self.gui:Destroy()
-            
-            for _, cb in ipairs(self.callbacks) do
-                pcall(cb)
-            end
-        end)
+        -- Then fire all callbacks
+        for _, cb in ipairs(cbs) do
+            pcall(cb)
+        end
     end)
 end
 
-function LoadingScreen:ShowButtonLoading(duration)
-    -- Mini loading overlay for button clicks
-    local overlay = Create("Frame", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Colors.SHADOW,
-        BackgroundTransparency = 0.5,
-        BorderSizePixel = 0,
-        ZIndex = 100
-    }, self.gui)
+function LoadingScreen:Destroy()
+    if self.isDestroyed then return end
+    self.isDestroyed = true
     
-    local spinner = Create("Frame", {
-        Size = UDim2.fromOffset(50, 50),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundTransparency = 1,
-        ZIndex = 101
-    }, overlay)
-    
-    -- Create spinner ring
-    for i = 0, 7 do
-        local dot = Create("Frame", {
-            Size = UDim2.fromOffset(8, 8),
-            Position = UDim2.fromScale(0.5, 0),
-            AnchorPoint = Vector2.new(0.5, 0),
-            BackgroundColor3 = Colors.ACCENT,
-            BackgroundTransparency = (i / 8),
-            BorderSizePixel = 0,
-            ZIndex = 102
-        }, spinner)
-        AddCorner(dot, 4)
-        dot.Rotation = (i * 45)
+    if self.connection then
+        self.connection:Disconnect()
+        self.connection = nil
     end
     
-    spawn(function()
-        local startTime = tick()
-        repeat
-            local elapsed = tick() - startTime
-            spinner.Rotation = elapsed * 360
-            task.wait(0.016)
-        until tick() - startTime >= duration
-        
-        TweenService:Create(overlay, TweenInfo.new(0.3), {
-            BackgroundTransparency = 1
-        }):Play()
-        
-        TweenService:Create(spinner, TweenInfo.new(0.3), {
-            GroupTransparency = 1
-        }):Play()
-        
-        task.delay(0.3, function()
-            overlay:Destroy()
-        end)
+    pcall(function()
+        self.gui:Destroy()
     end)
 end
 
 function LoadingScreen:Update(dt)
-    -- Update particles
+    if self.isDestroyed then return end
+    
     for _, particle in ipairs(self.particles) do
         local pos = particle.instance.Position
         particle.instance.Position = UDim2.new(
@@ -429,14 +382,12 @@ function LoadingScreen:Update(dt)
         )
         particle.instance.Rotation = particle.instance.Rotation + particle.rotSpeed * dt
         
-        -- Wrap around
         if pos.X.Scale < -0.05 then particle.instance.Position = UDim2.new(1.05, 0, pos.Y.Scale, 0) end
         if pos.X.Scale > 1.05 then particle.instance.Position = UDim2.new(-0.05, 0, pos.Y.Scale, 0) end
         if pos.Y.Scale < -0.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, 1.05, 0) end
         if pos.Y.Scale > 1.05 then particle.instance.Position = UDim2.new(pos.X.Scale, 0, -0.05, 0) end
     end
     
-    -- Animate progress bar
     local targetSize = UDim2.fromScale(self.progress, 1)
     self.progressFill.Size = UDim2.new(
         Lerp(self.progressFill.Size.X.Scale, targetSize.X.Scale, 0.15),
@@ -445,12 +396,99 @@ function LoadingScreen:Update(dt)
         0
     )
     
-    -- Pulse logo when complete
     if self.isComplete then
         local pulse = math.sin(tick() * 4) * 0.1 + 1
         self.logoCircle.Size = UDim2.fromOffset(100 * pulse, 100 * pulse)
     end
 end
+
+-- ═══════════════════════════════════════════════════════════════
+-- NOTIFICATION SYSTEM
+-- ═══════════════════════════════════════════════════════════════
+local Notifications = {}
+
+function Notifications.Show(title, text, duration, color)
+    duration = duration or 3
+    color = color or Colors.ACCENT
+    
+    local notifGui = Create("ScreenGui", {
+        Name = "UnknownHubNotif_" .. tick(),
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    }, playerGui)
+    
+    local container = Create("Frame", {
+        Size = UDim2.new(0, 300, 0, 80),
+        Position = UDim2.new(1, 320, 1, -100),
+        BackgroundColor3 = Colors.BG_CARD,
+        BorderSizePixel = 0
+    }, notifGui)
+    AddCorner(container, 12)
+    AddStroke(container, color, 1, 0.5)
+    
+    Create("Frame", {
+        Size = UDim2.new(0, 4, 0.7, 0),
+        Position = UDim2.new(0, 4, 0.15, 0),
+        BackgroundColor3 = color,
+        BorderSizePixel = 0
+    }, container)
+    AddCorner(container, 2)
+    
+    Create("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 28),
+        Position = UDim2.new(0, 16, 0, 10),
+        BackgroundTransparency = 1,
+        Text = title,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Colors.TEXT_PRIMARY,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, container)
+    
+    Create("TextLabel", {
+        Size = UDim2.new(1, -20, 0, 20),
+        Position = UDim2.new(0, 16, 0, 38),
+        BackgroundTransparency = 1,
+        Text = text,
+        Font = Enum.Font.Gotham,
+        TextSize = 12,
+        TextColor3 = Colors.TEXT_SECONDARY,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd
+    }, container)
+    
+    local progress = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 3),
+        Position = UDim2.new(0, 0, 1, -3),
+        BackgroundColor3 = color,
+        BorderSizePixel = 0
+    }, container)
+    
+    TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position = UDim2.new(1, -320, 1, -100)
+    }):Play()
+    
+    spawn(function()
+        local startTime = tick()
+        while tick() - startTime < duration do
+            local elapsed = tick() - startTime
+            local remaining = 1 - (elapsed / duration)
+            progress.Size = UDim2.new(remaining, 0, 0, 3)
+            task.wait(0.016)
+        end
+        
+        TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            Position = UDim2.new(1, 320, 1, -100),
+            BackgroundTransparency = 1
+        }):Play()
+        
+        task.delay(0.35, function()
+            notifGui:Destroy()
+        end)
+    end)
+end
+
+_G.UnknownHubNotify = Notifications.Show
 
 -- ═══════════════════════════════════════════════════════════════
 -- MAIN HUB GUI
@@ -472,30 +510,31 @@ function Hub.new()
 end
 
 function Hub:BuildGui()
-    -- Main GUI
     self.gui = Create("ScreenGui", {
         Name = "UnknownHub",
         IgnoreGuiInset = true,
         ResetOnSpawn = false,
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        Enabled = false
+        Enabled = true  -- CHANGED: Start enabled
     }, playerGui)
     
-    -- Background blur
+    -- Background overlay - MORE TRANSPARENT
     self.blur = Create("Frame", {
         Size = UDim2.fromScale(1, 1),
         BackgroundColor3 = Colors.SHADOW,
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0
+        BackgroundTransparency = 0.6,  -- CHANGED: More transparent
+        BorderSizePixel = 0,
+        Visible = false  -- CHANGED: Start hidden
     }, self.gui)
     
-    -- Main container
+    -- Main container - START VISIBLE BUT AT CORRECT SIZE
     self.main = Create("Frame", {
         Size = UDim2.fromOffset(520, 420),
         Position = UDim2.fromScale(0.5, 0.5),
         AnchorPoint = Vector2.new(0.5, 0.5),
         BackgroundColor3 = Colors.BG_DARK,
-        BorderSizePixel = 0
+        BorderSizePixel = 0,
+        Visible = false  -- CHANGED: Start hidden
     }, self.gui)
     AddCorner(self.main, 16)
     AddStroke(self.main, Colors.STROKE, 1, 0.3)
@@ -509,9 +548,9 @@ function Hub:BuildGui()
         ImageColor3 = Colors.SHADOW,
         ImageTransparency = 0.3,
         ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(49, 49, 450, 450)
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        ZIndex = -1
     }, self.main)
-    shadow.ZIndex = -1
     
     -- Title bar
     self.titleBar = Create("Frame", {
@@ -521,7 +560,6 @@ function Hub:BuildGui()
     }, self.main)
     AddCorner(self.titleBar, 16)
     
-    -- Fix bottom corners of title bar
     local titleFix = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 16),
         Position = UDim2.new(0, 0, 1, -16),
@@ -529,7 +567,6 @@ function Hub:BuildGui()
         BorderSizePixel = 0
     }, self.titleBar)
     
-    -- Title gradient bar
     local titleGrad = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 3),
         Position = UDim2.new(0, 0, 1, 0),
@@ -538,7 +575,6 @@ function Hub:BuildGui()
     }, self.titleBar)
     AddGradient(titleGrad, 0, {Colors.ACCENT, Colors.ACCENT_DARK, Colors.ACCENT})
     
-    -- Title text
     self.titleText = Create("TextLabel", {
         Size = UDim2.new(1, -80, 1, 0),
         Position = UDim2.new(0, 16, 0, 0),
@@ -550,7 +586,6 @@ function Hub:BuildGui()
         TextXAlignment = Enum.TextXAlignment.Left
     }, self.titleBar)
     
-    -- Close button
     self.closeBtn = Create("TextButton", {
         Size = UDim2.fromOffset(36, 36),
         Position = UDim2.new(1, -44, 0.5, -18),
@@ -565,10 +600,9 @@ function Hub:BuildGui()
     AddCorner(self.closeBtn, 8)
     
     self.closeBtn.MouseButton1Click:Connect(function()
-        self:Toggle()
+        self:Close()
     end)
     
-    -- Minimize button
     self.minBtn = Create("TextButton", {
         Size = UDim2.fromOffset(36, 36),
         Position = UDim2.new(1, -84, 0.5, -18),
@@ -591,7 +625,6 @@ function Hub:BuildGui()
     }, self.main)
     AddCorner(self.tabBar, 12)
     
-    -- Tab list
     self.tabList = Create("ScrollingFrame", {
         Size = UDim2.new(1, -8, 1, -8),
         Position = UDim2.new(0, 4, 0, 4),
@@ -611,10 +644,8 @@ function Hub:BuildGui()
         BorderSizePixel = 0
     }, self.main)
     
-    -- Make draggable
     self:MakeDraggable(self.titleBar, self.main)
     
-    -- Keybind
     self.bindKey = Enum.KeyCode.RightShift
     UserInputService.InputBegan:Connect(function(input, processed)
         if processed then return end
@@ -660,7 +691,6 @@ function Hub:AddTab(name, icon)
         button = nil
     }
     
-    -- Tab button
     local btn = Create("TextButton", {
         Size = UDim2.new(1, -8, 0, 38),
         BackgroundColor3 = Colors.BG_CARD_2,
@@ -675,7 +705,6 @@ function Hub:AddTab(name, icon)
     }, self.tabList)
     AddCorner(btn, 8)
     
-    -- Tab content
     local content = Create("ScrollingFrame", {
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -687,8 +716,7 @@ function Hub:AddTab(name, icon)
         Visible = false
     }, self.contentArea)
     
-    -- Content layout
-    local layout = Create("UIListLayout", {
+    Create("UIListLayout", {
         Padding = UDim.new(0, 8),
         SortOrder = Enum.SortOrder.LayoutOrder,
         HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -729,7 +757,6 @@ function Hub:AddTab(name, icon)
 end
 
 function Hub:SelectTab(name)
-    -- Hide all tabs
     for tabName, tab in pairs(self.tabs) do
         tab.content.Visible = false
         TweenService:Create(tab.button, TweenInfo.new(0.2), {
@@ -738,7 +765,6 @@ function Hub:SelectTab(name)
         }):Play()
     end
     
-    -- Show selected tab
     local tab = self.tabs[name]
     if tab then
         tab.content.Visible = true
@@ -764,7 +790,7 @@ function Hub:AddToggle(tabName, name, default, callback)
     }, tab.content)
     AddCorner(container, 10)
     
-    local label = Create("TextLabel", {
+    Create("TextLabel", {
         Size = UDim2.new(1, -60, 1, 0),
         Position = UDim2.new(0, 14, 0, 0),
         BackgroundTransparency = 1,
@@ -775,7 +801,6 @@ function Hub:AddToggle(tabName, name, default, callback)
         TextXAlignment = Enum.TextXAlignment.Left
     }, container)
     
-    -- Toggle background
     local toggleBg = Create("Frame", {
         Size = UDim2.fromOffset(44, 24),
         Position = UDim2.new(1, -56, 0.5, -12),
@@ -784,7 +809,6 @@ function Hub:AddToggle(tabName, name, default, callback)
     }, container)
     AddCorner(toggleBg, 12)
     
-    -- Toggle circle
     local toggleCircle = Create("Frame", {
         Size = UDim2.fromOffset(18, 18),
         Position = isOn and UDim2.new(1, -22, 0.5, -9) or UDim2.new(0, 3, 0.5, -9),
@@ -843,7 +867,7 @@ function Hub:AddSlider(tabName, name, min, max, default, callback)
     }, tab.content)
     AddCorner(container, 10)
     
-    local label = Create("TextLabel", {
+    Create("TextLabel", {
         Size = UDim2.new(1, -100, 0, 24),
         Position = UDim2.new(0, 14, 0, 8),
         BackgroundTransparency = 1,
@@ -865,7 +889,6 @@ function Hub:AddSlider(tabName, name, min, max, default, callback)
         TextXAlignment = Enum.TextXAlignment.Right
     }, container)
     
-    -- Slider background
     local sliderBg = Create("Frame", {
         Size = UDim2.new(1, -28, 0, 8),
         Position = UDim2.new(0, 14, 0, 38),
@@ -874,7 +897,6 @@ function Hub:AddSlider(tabName, name, min, max, default, callback)
     }, container)
     AddCorner(sliderBg, 4)
     
-    -- Slider fill
     local percent = (value - min) / (max - min)
     local sliderFill = Create("Frame", {
         Size = UDim2.fromScale(percent, 1),
@@ -883,7 +905,6 @@ function Hub:AddSlider(tabName, name, min, max, default, callback)
     }, sliderBg)
     AddCorner(sliderFill, 4)
     
-    -- Slider button
     local sliderBtn = Create("Frame", {
         Size = UDim2.fromOffset(16, 16),
         Position = UDim2.fromScale(percent, 0.5),
@@ -976,7 +997,6 @@ function Hub:AddButton(tabName, name, callback, showLoading)
         AutoButtonColor = false
     }, container)
     
-    -- Arrow icon
     local arrow = Create("TextLabel", {
         Size = UDim2.new(0, 24, 1, 0),
         Position = UDim2.new(1, -30, 0, 0),
@@ -1008,13 +1028,12 @@ function Hub:AddButton(tabName, name, callback, showLoading)
     
     container.MouseButton1Click:Connect(function()
         if showLoading ~= false then
-            -- Show mini loading effect
             local originalText = label.Text
             label.Text = "Loading..."
             label.TextColor3 = Colors.ACCENT
             
             spawn(function()
-                task.wait(0.8)
+                task.wait(0.6)
                 label.Text = originalText
                 label.TextColor3 = Colors.TEXT_PRIMARY
                 if callback then
@@ -1035,7 +1054,7 @@ function Hub:AddLabel(tabName, text)
     local tab = self.tabs[tabName]
     if not tab then return nil end
     
-    local label = Create("TextLabel", {
+    return Create("TextLabel", {
         Size = UDim2.new(1, -8, 0, 24),
         BackgroundTransparency = 1,
         Text = text,
@@ -1044,47 +1063,69 @@ function Hub:AddLabel(tabName, text)
         TextColor3 = Colors.TEXT_MUTED,
         TextXAlignment = Enum.TextXAlignment.Left
     }, tab.content)
-    
-    return label
 end
 
 function Hub:AddSeparator(tabName)
     local tab = self.tabs[tabName]
     if not tab then return nil end
     
-    local sep = Create("Frame", {
+    return Create("Frame", {
         Size = UDim2.new(1, -16, 0, 1),
         BackgroundColor3 = Colors.STROKE,
         BackgroundTransparency = 0.5,
         BorderSizePixel = 0
     }, tab.content)
+end
+
+function Hub:Open()
+    if self.isOpen then return end
+    self.isOpen = true
     
-    return sep
+    self.blur.Visible = true
+    self.main.Visible = true
+    
+    -- Animate in
+    self.main.Size = UDim2.fromOffset(0, 0)
+    self.blur.BackgroundTransparency = 1
+    
+    TweenService:Create(self.blur, TweenInfo.new(0.3), {
+        BackgroundTransparency = 0.6
+    }):Play()
+    
+    TweenService:Create(self.main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Size = UDim2.fromOffset(520, 420)
+    }):Play()
+end
+
+function Hub:Close()
+    if not self.isOpen then return end
+    self.isOpen = false
+    
+    -- Animate out
+    TweenService:Create(self.blur, TweenInfo.new(0.3), {
+        BackgroundTransparency = 1
+    }):Play()
+    
+    TweenService:Create(self.main, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+        Size = UDim2.fromOffset(0, 0)
+    }):Play()
+    
+    task.delay(0.35, function()
+        self.blur.Visible = false
+        self.main.Visible = false
+    end)
 end
 
 function Hub:Toggle()
-    self.isOpen = not self.isOpen
-    self.gui.Enabled = self.isOpen
-    
     if self.isOpen then
-        -- Animate in
-        self.main.Size = UDim2.fromOffset(0, 0)
-        self.main.BackgroundTransparency = 1
-        self.blur.BackgroundTransparency = 1
-        
-        TweenService:Create(self.blur, TweenInfo.new(0.3), {
-            BackgroundTransparency = 0.6
-        }):Play()
-        
-        TweenService:Create(self.main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Size = UDim2.fromOffset(520, 420),
-            BackgroundTransparency = 0
-        }):Play()
+        self:Close()
+    else
+        self:Open()
     end
 end
 
 -- ═══════════════════════════════════════════════════════════════
--- DISCORD POPUP (Modified for Unknown Hub)
+-- DISCORD POPUP
 -- ═══════════════════════════════════════════════════════════════
 local function ShowDiscordPopup()
     if config.__DiscordShown then return end
@@ -1096,7 +1137,6 @@ local function ShowDiscordPopup()
         ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     }, playerGui)
     
-    -- Overlay
     local overlay = Create("Frame", {
         Size = UDim2.fromScale(1, 1),
         BackgroundColor3 = Colors.SHADOW,
@@ -1104,7 +1144,6 @@ local function ShowDiscordPopup()
         BorderSizePixel = 0
     }, popup)
     
-    -- Card
     local card = Create("Frame", {
         Size = UDim2.fromOffset(380, 240),
         Position = UDim2.fromScale(0.5, 0.5),
@@ -1115,22 +1154,20 @@ local function ShowDiscordPopup()
     AddCorner(card, 20)
     AddStroke(card, Colors.ACCENT, 2, 0.3)
     
-    -- Glow effect
-    local glow = Create("UIStroke", {
+    Create("UIStroke", {
         Thickness = 12,
         Transparency = 0.9,
         Color = Colors.ACCENT_GLOW,
         LineJoinMode = Enum.LineJoinMode.Round
     }, card)
     
-    -- Title bar
     local topBar = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 44),
         BackgroundColor3 = Colors.BG_CARD_2,
         BorderSizePixel = 0
     }, card)
     AddCorner(topBar, 20)
-    local topFix = Create("Frame", {
+    Create("Frame", {
         Size = UDim2.new(1, 0, 0, 20),
         Position = UDim2.new(0, 0, 1, -20),
         BackgroundColor3 = Colors.BG_CARD_2,
@@ -1147,7 +1184,6 @@ local function ShowDiscordPopup()
     }, topBar)
     AddGradient(title, 0, {Colors.ACCENT, Colors.TEXT_PRIMARY})
     
-    -- Close button
     local closeBtn = Create("TextButton", {
         Size = UDim2.fromOffset(32, 32),
         Position = UDim2.new(1, -40, 0.5, -16),
@@ -1162,8 +1198,7 @@ local function ShowDiscordPopup()
     AddCorner(closeBtn, 8)
     AddStroke(closeBtn, Colors.STROKE, 1, 0.3)
     
-    -- Body text
-    local body = Create("TextLabel", {
+    Create("TextLabel", {
         Size = UDim2.new(1, -40, 0, 80),
         Position = UDim2.new(0, 20, 0, 56),
         BackgroundTransparency = 1,
@@ -1175,7 +1210,6 @@ local function ShowDiscordPopup()
         TextWrapped = true
     }, card)
     
-    -- Copy button
     local copyBtn = Create("TextButton", {
         Size = UDim2.new(1, -40, 0, 42),
         Position = UDim2.new(0, 20, 1, -72),
@@ -1189,8 +1223,7 @@ local function ShowDiscordPopup()
     }, card)
     AddCorner(copyBtn, 12)
     
-    -- Link text
-    local linkText = Create("TextLabel", {
+    Create("TextLabel", {
         Size = UDim2.new(1, -40, 0, 20),
         Position = UDim2.new(0, 20, 1, -26),
         BackgroundTransparency = 1,
@@ -1200,7 +1233,6 @@ local function ShowDiscordPopup()
         TextColor3 = Colors.TEXT_MUTED
     }, card)
     
-    -- Toast
     local toast = Create("TextLabel", {
         Size = UDim2.new(1, -40, 0, 20),
         Position = UDim2.new(0, 20, 1, -50),
@@ -1236,8 +1268,7 @@ local function ShowDiscordPopup()
         SaveConfig()
         TweenService:Create(overlay, TweenInfo.new(0.3), {BackgroundTransparency = 1}):Play()
         TweenService:Create(card, TweenInfo.new(0.3), {
-            Size = UDim2.fromOffset(0, 0),
-            BackgroundTransparency = 1
+            Size = UDim2.fromOffset(0, 0)
         }):Play()
         task.delay(0.35, function()
             popup:Destroy()
@@ -1251,7 +1282,6 @@ local function ShowDiscordPopup()
         end
     end)
     
-    -- Animate in
     card.Size = UDim2.fromOffset(0, 0)
     TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
         Size = UDim2.fromOffset(380, 240)
@@ -1265,14 +1295,6 @@ local function HandleFirstRun()
     local needFirstRun = not CheckFirstRun()
     if needFirstRun then
         MarkFirstRun()
-        -- You can add first-run specific logic here
-        -- For example, loading additional scripts
-        task.delay(2, function()
-            pcall(function()
-                -- Add your first-run remote script here
-                -- loadstring(game:HttpGet("YOUR_FIRST_RUN_URL"))()
-            end)
-        end)
     end
 end
 
@@ -1281,7 +1303,6 @@ end
 -- ═══════════════════════════════════════════════════════════════
 local loadingScreen = LoadingScreen.new()
 
--- Simulate loading progress
 task.spawn(function()
     loadingScreen:SetProgress(0.05, "Checking executor...")
     task.wait(0.3)
@@ -1311,10 +1332,8 @@ task.spawn(function()
 end)
 
 loadingScreen:OnComplete(function()
-    -- Handle first run
     HandleFirstRun()
     
-    -- Create the hub
     local hub = Hub.new()
     
     -- ═══════════════════════════════════════════════════════════
@@ -1325,138 +1344,138 @@ loadingScreen:OnComplete(function()
     local mainTab = hub:AddTab("Main", "🏠")
     hub:AddLabel(mainTab.name, "COMBAT")
     hub:AddToggle(mainTab.name, "Melee Aimbot", false, function(state)
-        print("Melee Aimbot:", state)
+        Notifications.Show("Combat", "Melee Aimbot: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(mainTab.name, "Auto Steal Nearest", false, function(state)
-        print("Auto Steal Nearest:", state)
+        Notifications.Show("Combat", "Auto Steal: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(mainTab.name, "Kill Aura", false, function(state)
-        print("Kill Aura:", state)
+        Notifications.Show("Combat", "Kill Aura: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSeparator(mainTab.name)
     hub:AddLabel(mainTab.name, "MOVEMENT")
     hub:AddToggle(mainTab.name, "Speed Hack", false, function(state)
-        print("Speed Hack:", state)
+        Notifications.Show("Movement", "Speed Hack: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSlider(mainTab.name, "Speed Value", 16, 500, 100, function(value)
         print("Speed Value:", value)
     end)
     hub:AddToggle(mainTab.name, "Infinite Jump", false, function(state)
-        print("Infinite Jump:", state)
+        Notifications.Show("Movement", "Infinite Jump: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(mainTab.name, "No Clip", false, function(state)
-        print("No Clip:", state)
+        Notifications.Show("Movement", "No Clip: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSeparator(mainTab.name)
     hub:AddLabel(mainTab.name, "PLAYER")
     hub:AddToggle(mainTab.name, "God Mode", false, function(state)
-        print("God Mode:", state)
+        Notifications.Show("Player", "God Mode: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(mainTab.name, "Invisible", false, function(state)
-        print("Invisible:", state)
+        Notifications.Show("Player", "Invisible: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddButton(mainTab.name, "Respawn", function()
-        print("Respawning...")
+        Notifications.Show("Player", "Respawning...", 2)
     end)
     
     -- FARM TAB
     local farmTab = hub:AddTab("Farm", "🌾")
     hub:AddToggle(farmTab.name, "Auto Farm", false, function(state)
-        print("Auto Farm:", state)
+        Notifications.Show("Farm", "Auto Farm: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(farmTab.name, "Auto Collect", false, function(state)
-        print("Auto Collect:", state)
+        Notifications.Show("Farm", "Auto Collect: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(farmTab.name, "Auto Sell", false, function(state)
-        print("Auto Sell:", state)
+        Notifications.Show("Farm", "Auto Sell: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSlider(farmTab.name, "Collect Radius", 10, 500, 100, function(value)
         print("Collect Radius:", value)
     end)
     hub:AddSeparator(farmTab.name)
     hub:AddToggle(farmTab.name, "Cash Multiplier", false, function(state)
-        print("Cash Multiplier:", state)
+        Notifications.Show("Farm", "Cash Multiplier: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSlider(farmTab.name, "Multiplier Value", 1, 100, 2, function(value)
         print("Multiplier Value:", value)
     end)
     hub:AddToggle(farmTab.name, "Auto Quest", false, function(state)
-        print("Auto Quest:", state)
+        Notifications.Show("Farm", "Auto Quest: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddButton(farmTab.name, "Teleport to Collect Zone", function()
-        print("Teleporting...")
+        Notifications.Show("Farm", "Teleporting...", 2)
     end)
     
     -- SHOP TAB
     local shopTab = hub:AddTab("Shop", "🛒")
     hub:AddButton(shopTab.name, "Buy All Upgrades", function()
-        print("Buying all upgrades...")
+        Notifications.Show("Shop", "Buying all upgrades...", 2)
     end)
     hub:AddButton(shopTab.name, "Max All Stats", function()
-        print("Maxing stats...")
+        Notifications.Show("Shop", "Maxing stats...", 2)
     end)
     hub:AddToggle(shopTab.name, "Auto Buy Best", false, function(state)
-        print("Auto Buy Best:", state)
+        Notifications.Show("Shop", "Auto Buy Best: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSeparator(shopTab.name)
     hub:AddLabel(shopTab.name, "WEAPONS")
     hub:AddButton(shopTab.name, "Unlock All Weapons", function()
-        print("Unlocking weapons...")
+        Notifications.Show("Shop", "Unlocking weapons...", 2)
     end)
     hub:AddButton(shopTab.name, "Get Best Weapon", function()
-        print("Getting best weapon...")
+        Notifications.Show("Shop", "Getting best weapon...", 2)
     end)
     hub:AddSeparator(shopTab.name)
     hub:AddLabel(shopTab.name, "ABILITIES")
     hub:AddButton(shopTab.name, "Unlock All Abilities", function()
-        print("Unlocking abilities...")
+        Notifications.Show("Shop", "Unlocking abilities...", 2)
     end)
     hub:AddButton(shopTab.name, "Max Abilities", function()
-        print("Maxing abilities...")
+        Notifications.Show("Shop", "Maxing abilities...", 2)
     end)
     
     -- TELEPORT TAB
     local tpTab = hub:AddTab("Teleport", "⚡")
     hub:AddButton(tpTab.name, "Teleport to Spawn", function()
-        print("Teleporting to spawn...")
+        Notifications.Show("Teleport", "Teleporting to spawn...", 2)
     end)
     hub:AddButton(tpTab.name, "Teleport to Collect Zone", function()
-        print("Teleporting to collect zone...")
+        Notifications.Show("Teleport", "Teleporting to collect zone...", 2)
     end)
     hub:AddButton(tpTab.name, "Teleport to Shop", function()
-        print("Teleporting to shop...")
+        Notifications.Show("Teleport", "Teleporting to shop...", 2)
     end)
     hub:AddButton(tpTab.name, "Teleport to PvP Arena", function()
-        print("Teleporting to PvP arena...")
+        Notifications.Show("Teleport", "Teleporting to PvP arena...", 2)
     end)
     hub:AddSeparator(tpTab.name)
     hub:AddToggle(tpTab.name, "Teleport to Nearest Player", false, function(state)
-        print("Teleport to Nearest Player:", state)
+        Notifications.Show("Teleport", "TP to Player: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(tpTab.name, "Teleport to Nearest Coin", false, function(state)
-        print("Teleport to Nearest Coin:", state)
+        Notifications.Show("Teleport", "TP to Coin: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddButton(tpTab.name, "Random Teleport", function()
-        print("Random teleporting...")
+        Notifications.Show("Teleport", "Random teleporting...", 2)
     end)
     
     -- VISUALS TAB
     local visTab = hub:AddTab("Visuals", "👁")
     hub:AddToggle(visTab.name, "ESP Players", false, function(state)
-        print("ESP Players:", state)
+        Notifications.Show("Visuals", "ESP Players: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(visTab.name, "ESP Items", false, function(state)
-        print("ESP Items:", state)
+        Notifications.Show("Visuals", "ESP Items: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(visTab.name, "ESP Coins", false, function(state)
-        print("ESP Coins:", state)
+        Notifications.Show("Visuals", "ESP Coins: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSeparator(visTab.name)
     hub:AddToggle(visTab.name, "Chams", false, function(state)
-        print("Chams:", state)
+        Notifications.Show("Visuals", "Chams: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(visTab.name, "Tracers", false, function(state)
-        print("Tracers:", state)
+        Notifications.Show("Visuals", "Tracers: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSlider(visTab.name, "ESP Distance", 50, 5000, 500, function(value)
         print("ESP Distance:", value)
@@ -1464,40 +1483,40 @@ loadingScreen:OnComplete(function()
     hub:AddSeparator(visTab.name)
     hub:AddLabel(visTab.name, "MISC VISUALS")
     hub:AddToggle(visTab.name, "Full Bright", false, function(state)
-        print("Full Bright:", state)
+        Notifications.Show("Visuals", "Full Bright: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddToggle(visTab.name, "No Fog", false, function(state)
-        print("No Fog:", state)
+        Notifications.Show("Visuals", "No Fog: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     
     -- MISC TAB
     local miscTab = hub:AddTab("Misc", "⚙")
     hub:AddButton(miscTab.name, "Anti-AFK", function()
-        print("Anti-AFK enabled")
+        Notifications.Show("Misc", "Anti-AFK enabled!", 2, Colors.SUCCESS)
     end)
     hub:AddToggle(miscTab.name, "Auto Rejoin", false, function(state)
-        print("Auto Rejoin:", state)
+        Notifications.Show("Misc", "Auto Rejoin: " .. (state and "ON" or "OFF"), 2, state and Colors.SUCCESS or Colors.DANGER)
     end)
     hub:AddSlider(miscTab.name, "Rejoin Delay", 5, 60, 10, function(value)
         print("Rejoin Delay:", value)
     end)
     hub:AddSeparator(miscTab.name)
     hub:AddButton(miscTab.name, "Server Hop", function()
-        print("Server hopping...")
+        Notifications.Show("Misc", "Server hopping...", 2)
     end)
     hub:AddButton(miscTab.name, "Rejoin Server", function()
-        print("Rejoining...")
+        Notifications.Show("Misc", "Rejoining...", 2)
     end)
     hub:AddSeparator(miscTab.name)
     hub:AddLabel(miscTab.name, "SETTINGS")
     hub:AddButton(miscTab.name, "Reset Config", function()
         settings = {}
         SaveConfig()
-        print("Config reset!")
+        Notifications.Show("Misc", "Config reset!", 2, Colors.WARNING)
     end)
     hub:AddButton(miscTab.name, "Save Config", function()
         SaveConfig()
-        print("Config saved!")
+        Notifications.Show("Misc", "Config saved!", 2, Colors.SUCCESS)
     end, false)
     hub:AddLabel(miscTab.name, "Keybind: RightShift")
     
@@ -1513,126 +1532,29 @@ loadingScreen:OnComplete(function()
         pcall(function()
             if setclipboard then setclipboard("https://discord.gg/unknown-hub") end
         end)
-        print("Discord link copied!")
+        Notifications.Show("Links", "Discord link copied!", 2, Colors.SUCCESS)
     end)
     hub:AddButton(credTab.name, "Copy Hub Link", function()
         pcall(function()
             if setclipboard then setclipboard("https://raw.githubusercontent.com/unknown/unknown-hub/main/loader.lua") end
         end)
-        print("Hub link copied!")
+        Notifications.Show("Links", "Hub link copied!", 2, Colors.SUCCESS)
     end)
     
-    -- Select first tab
     hub:SelectTab("Main")
     
     -- Show discord popup after a delay
-    task.delay(1, function()
+    task.delay(1.5, function()
         ShowDiscordPopup()
     end)
     
-    -- Open hub
-    task.delay(0.5, function()
-        hub:Toggle()
+    -- Open hub with delay
+    task.delay(0.3, function()
+        hub:Open()
     end)
     
-    -- Store hub globally for external access
     _G.UnknownHub = hub
+    
+    print("[Unknown Hub] Loaded successfully!")
+    print("[Unknown Hub] Keybind: RightShift")
 end)
-
--- ═══════════════════════════════════════════════════════════════
--- NOTIFICATION SYSTEM
--- ═══════════════════════════════════════════════════════════════
-local Notifications = {}
-
-function Notifications.Show(title, text, duration, color)
-    duration = duration or 3
-    color = color or Colors.ACCENT
-    
-    local notifGui = Create("ScreenGui", {
-        Name = "UnknownHubNotif_" .. tick(),
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    }, playerGui)
-    
-    local container = Create("Frame", {
-        Size = UDim2.new(0, 300, 0, 80),
-        Position = UDim2.new(1, 320, 1, -100),
-        BackgroundColor3 = Colors.BG_CARD,
-        BorderSizePixel = 0
-    }, notifGui)
-    AddCorner(container, 12)
-    AddStroke(container, color, 1, 0.5)
-    
-    -- Accent bar
-    Create("Frame", {
-        Size = UDim2.new(0, 4, 0.7, 0),
-        Position = UDim2.new(0, 4, 0.15, 0),
-        BackgroundColor3 = color,
-        BorderSizePixel = 0
-    }, container)
-    AddCorner(container, 2)
-    
-    local titleLbl = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 28),
-        Position = UDim2.new(0, 16, 0, 10),
-        BackgroundTransparency = 1,
-        Text = title,
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Colors.TEXT_PRIMARY,
-        TextXAlignment = Enum.TextXAlignment.Left
-    }, container)
-    
-    local textLbl = Create("TextLabel", {
-        Size = UDim2.new(1, -20, 0, 20),
-        Position = UDim2.new(0, 16, 0, 38),
-        BackgroundTransparency = 1,
-        Text = text,
-        Font = Enum.Font.Gotham,
-        TextSize = 12,
-        TextColor3 = Colors.TEXT_SECONDARY,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd
-    }, container)
-    
-    -- Progress bar
-    local progress = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 3),
-        Position = UDim2.new(0, 0, 1, -3),
-        BackgroundColor3 = color,
-        BorderSizePixel = 0
-    }, container)
-    
-    -- Animate in
-    TweenService:Create(container, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position = UDim2.new(1, -320, 1, -100)
-    }):Play()
-    
-    -- Progress animation
-    spawn(function()
-        local startTime = tick()
-        while tick() - startTime < duration do
-            local elapsed = tick() - startTime
-            local remaining = 1 - (elapsed / duration)
-            progress.Size = UDim2.new(remaining, 0, 0, 3)
-            task.wait(0.016)
-        end
-        
-        -- Animate out
-        TweenService:Create(container, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
-            Position = UDim2.new(1, 320, 1, -100),
-            BackgroundTransparency = 1
-        }):Play()
-        
-        task.delay(0.35, function()
-            notifGui:Destroy()
-        end)
-    end)
-end
-
--- Make notifications global
-_G.UnknownHubNotify = Notifications.Show
-
-print("[Unknown Hub] Loaded successfully!")
-print("[Unknown Hub] Executor: " .. executorName)
-print("[Unknown Hub] Keybind: RightShift")
